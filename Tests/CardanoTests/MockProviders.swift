@@ -14,6 +14,8 @@ enum ApiTestError: Error {
 
 struct NetworkProviderMock: NetworkProvider {
     var getSlotNumberMock: ((_ cb: @escaping (Result<Int?, Error>) -> Void) -> Void)?
+    var getBlockProcessingTimeMock: ((_ cb: @escaping (Result<TimeInterval?, Error>) -> Void) -> Void)?
+    var getBlockConfirmationsMock: ((_ cb: @escaping (Result<Int, Error>) -> Void) -> Void)?
     var getBalanceMock: ((Address, _ cb: @escaping (Result<UInt64, Error>) -> Void) -> Void)?
     var getTransactionsMock: ((Address, _ cb: @escaping (Result<[AddressTransaction], Error>) -> Void) -> Void)?
     var getTransactionCountMock: ((Address, _ cb: @escaping (Result<Int, Error>) -> Void) -> Void)?
@@ -24,6 +26,14 @@ struct NetworkProviderMock: NetworkProvider {
     
     func getSlotNumber(_ cb: @escaping (Result<Int?, Error>) -> Void) {
         getSlotNumberMock!(cb)
+    }
+
+    func getBlockProcessingTime(_ cb: @escaping (Result<TimeInterval?, Error>) -> Void) {
+        getBlockProcessingTimeMock!(cb)
+    }
+
+    func getBlockConfirmations(for hash: String, _ cb: @escaping (Result<Int, Error>) -> Void) {
+        getBlockConfirmationsMock!(cb)
     }
     
     func getBalance(for address: Address, _ cb: @escaping (Result<UInt64, Error>) -> Void) {

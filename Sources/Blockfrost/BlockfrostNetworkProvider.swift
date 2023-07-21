@@ -57,7 +57,41 @@ public struct BlockfrostNetworkProvider: NetworkProvider {
             })
         }
     }
-    
+
+    public func getBlockProcessingTime(_ cb: @escaping (Result<TimeInterval?, Error>) -> Void) {
+        let _ = blocksApi.getLatestBlock { res in
+            switch res {
+            case .success(let latestBlock):
+                guard let previousBlockHash = latestBlock.previousBlock else {
+                    cb(.success(nil))
+                    return
+                }
+                let _ = blocksApi.getBlock(hashOrNumber: previousBlockHash) { res in
+                    switch res {
+                    case .success(let previousBlock):
+                        let difference = TimeInterval(latestBlock.time - previousBlock.time)
+                        cb(.success(difference))
+                    case .failure(let error):
+                        cb(.failure(error))
+                    }
+                }
+            case .failure(let error):
+                cb(.failure(error))
+            }
+        }
+    }
+
+    public func getBlockConfirmations(for hash: String, _ cb: @escaping (Result<Int, Error>) -> Void) {
+        let _ = blocksApi.getBlock(hashOrNumber: hash) { res in
+            switch res {
+            case .success(let block):
+                cb(.success(block.confirmations))
+            case .failure(let error):
+                cb(.failure(error))
+            }
+        }
+    }
+
     public func getBalance(for address: Address,
                            _ cb: @escaping (Result<UInt64, Error>) -> Void) {
         do {
