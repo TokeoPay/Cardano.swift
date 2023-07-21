@@ -20,12 +20,14 @@ public class SimpleAddressManager: AddressManager, CardanoBootstrapAware {
     private var addresses: [Address: Bip32Path]
     private var accountAddresses: [Account: OrderedSet<Address>]
     private var accountChangeAddresses: [Account: OrderedSet<Address>]
+    private var accountEnterpriseAddresses: [Account: Address]
     
     public init() {
         syncQueue = DispatchQueue(label: "AddressManager.Sync.Queue", target: .global())
         addresses = [:]
         accountAddresses = [:]
         accountChangeAddresses = [:]
+        accountEnterpriseAddresses = [:]
     }
     
     public func bootstrap(cardano: CardanoProtocol) throws {
@@ -69,10 +71,15 @@ public class SimpleAddressManager: AddressManager, CardanoBootstrapAware {
         try syncQueue.sync {
             let addresses = accountAddresses[account]
             let changeAddresses = accountChangeAddresses[account]
-            guard addresses != nil || changeAddresses != nil else {
+            let enterpriseAddress = accountEnterpriseAddresses[account]
+            guard addresses != nil || changeAddresses != nil || enterpriseAddress != nil else {
                 throw AddressManagerError.notInCache(account: account)
             }
-            return Array(addresses ?? []) + Array(changeAddresses ?? [])
+            var cachedAddresses = Array(addresses ?? []) + Array(changeAddresses ?? [])
+            if let enterpriseAddress {
+                cachedAddresses.append(enterpriseAddress)
+            }
+            return cachedAddresses
         }
     }
     
@@ -90,7 +97,7 @@ public class SimpleAddressManager: AddressManager, CardanoBootstrapAware {
                            all: [(ExtendedAddress, Bool)],
                            change: Bool,
                            _ cb: @escaping (Result<[ExtendedAddress], Error>) -> Void) {
-        let addresses: [ExtendedAddress]
+        var addresses: [ExtendedAddress]
         do {
             addresses = try (0..<fetchChunkSize).map { offset in
                 try account.baseAddress(
@@ -155,6 +162,12 @@ public class SimpleAddressManager: AddressManager, CardanoBootstrapAware {
                                 var accountAddresses = self.accountAddresses[account] ?? []
                                 accountAddresses.append(contentsOf: addresses.map { $0.address })
                                 self.accountAddresses[account] = accountAddresses
+
+                                if self.accountEnterpriseAddresses[account] == nil {
+                                    self.accountEnterpriseAddresses[account] = try? account.paymentAddress(
+                                        networkID: self.cardano.info.networkID
+                                    )
+                                }
                             }
                         }
                     })
@@ -176,7 +189,9 @@ public class SimpleAddressManager: AddressManager, CardanoBootstrapAware {
         syncQueue.sync {
             Array(accountAddresses.keys) + accountChangeAddresses.keys.filter {
                 !accountAddresses.keys.contains($0)
-            }
+            } + accountEnterpriseAddresses.keys.filter({
+                !accountAddresses.keys.contains($0) && !accountChangeAddresses.keys.contains($0)
+            })
         }
     }
     

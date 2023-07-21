@@ -50,6 +50,10 @@ final class AddressManagerTests: XCTestCase {
             networkID: NetworkInfo.testnet.network_id
         )
     }
+
+    private static var testEnterpriseAddress: ExtendedAddress {
+        try! testAccount.extendedPaymentAddress(networkID: NetworkInfo.testnet.network_id)
+    }
     
     func testAccounts() throws {
         let success = expectation(description: "success")
@@ -110,7 +114,8 @@ final class AddressManagerTests: XCTestCase {
                     let addresses = try cardano.addresses.get(cached: accounts[0])
                     XCTAssertEqual(addresses, [
                         Self.testAddress.address,
-                        Self.testChangeAddress.address
+                        Self.testChangeAddress.address,
+                        Self.testEnterpriseAddress.address
                     ])
                     success.fulfill()
                 } catch {
@@ -136,7 +141,8 @@ final class AddressManagerTests: XCTestCase {
                 let addresses = try! res.get()
                 XCTAssertEqual(addresses, [
                     Self.testAddress.address,
-                    Self.testChangeAddress.address
+                    Self.testChangeAddress.address,
+                    Self.testEnterpriseAddress.address
                 ])
                 success.fulfill()
             }
@@ -162,7 +168,8 @@ final class AddressManagerTests: XCTestCase {
                     let addresses = try cardano.addresses.get(cached: accounts[0])
                     XCTAssertEqual(addresses, [
                         Self.testAddress.address,
-                        Self.testChangeAddress.address
+                        Self.testChangeAddress.address,
+                        Self.testEnterpriseAddress.address
                     ])
                     success.fulfill()
                 } catch {

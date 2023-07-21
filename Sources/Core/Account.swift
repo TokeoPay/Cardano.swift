@@ -52,4 +52,28 @@ public struct Account: Hashable {
             path: path
         )
     }
+
+    public func extendedPaymentAddress(networkID: UInt8) throws -> ExtendedAddress {
+        ExtendedAddress(
+            address: try paymentAddress(networkID: networkID),
+            path: try path
+                .appending(0) // Is change == false
+                .appending(0) // Index == 0
+        )
+    }
+
+    public func paymentAddress(networkID: UInt8) throws -> Address {
+        EnterpriseAddress(
+            network: networkID,
+            payment: try stakeForPayment()
+        )
+        .toAddress()
+    }
+
+    public func stakeForPayment() throws -> StakeCredential {
+        let stake = try publicKey
+            .derive(index: 0)
+            .derive(index: 0)
+        return StakeCredential.keyHash(try stake.toRawKey().hash())
+    }
 }
