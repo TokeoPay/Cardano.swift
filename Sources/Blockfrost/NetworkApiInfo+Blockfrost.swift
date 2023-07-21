@@ -22,6 +22,11 @@ public extension NetworkApiInfo {
             return BlockfrostConfig.mainnetDefault().clone()
         case .testnet:
             return BlockfrostConfig.testnetDefault().clone()
+        case .preprod:
+            return BlockfrostConfig(
+                basePath: "https://cardano-preprod.blockfrost.io/api/v0",
+                projectId: BlockfrostConfig.getEnvProjectId() ?? BlockfrostConfig.getEnvProjectIdTestnet()
+            )
         default:
             throw BlockfrostNetworkInfoError.unknownNetworkID(self.networkID)
         }

@@ -41,7 +41,18 @@ public struct NetworkApiInfo: Equatable, Hashable {
         maxTxSize: 16384,
         coinsPerUtxoWord: 34482
     )
-    
+
+    public static let preprod = Self(
+        networkID: 0,
+        protocolMagic: 1,
+        linearFee: LinearFee(constant: 155381, coefficient: 44),
+        poolDeposit: 500000000,
+        keyDeposit: 2000000,
+        maxValueSize: 5000,
+        maxTxSize: 16384,
+        coinsPerUtxoWord: 34482
+    )
+
     public static let mainnet = shelley
     public static let testnet = alonzo
 }
