@@ -39,7 +39,7 @@ final class CardanoSendApiTests: XCTestCase {
         )
         let cardano = try Cardano(
             blockfrost: TestEnvironment.instance.blockfrostProjectId,
-            info: .testnet,
+            info: .preprod,
             signer: keychain
         )
         let account = try keychain.addAccount(index: 0)
