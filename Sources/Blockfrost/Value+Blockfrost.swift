@@ -22,7 +22,9 @@ extension Value {
                 let unit = Data(hex: asset.unit)!
                 let policyID = try PolicyID(bytes: unit.subdata(in: (0..<28)))
                 let assetName = try AssetName(name: unit.subdata(in: (28..<unit.count)))
-                multiasset[policyID] = [assetName: UInt64(asset.quantity)!]
+                var policyIDAssets = multiasset[policyID] ?? [:]
+                policyIDAssets[assetName] = UInt64(asset.quantity)!
+                multiasset[policyID] = policyIDAssets
             }
         }
         self.init(coin: coin)
