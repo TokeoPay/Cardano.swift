@@ -75,17 +75,28 @@ final class CardanoSendApiTests: XCTestCase {
         ).address
     }
     
-    private static let testUtxo = TransactionUnspentOutput(
-        input: TransactionInput(
-            transaction_id: TransactionHash(),
-            index: 1
-        ),
-        output: TransactionOutput(
-            address: testExtendedAddress.address,
-            amount: Value(coin: 10000000)
+    private static let testUtxo: TransactionUnspentOutput = {
+        var value = Value(coin: 10000000)
+        let policyID = try! PolicyID(bytes: testAssetID.policyIDData!)
+        let assetName = try! AssetName(name: testAssetID.assetNameData!)
+        value.multiasset = MultiAsset(
+            dictionaryLiteral: (
+                policyID,
+                Assets(dictionaryLiteral: (assetName, 10000000))
+            )
         )
-    )
-    
+        return TransactionUnspentOutput(
+            input: TransactionInput(
+                transaction_id: TransactionHash(),
+                index: 1
+            ),
+            output: TransactionOutput(
+                address: testExtendedAddress.address,
+                amount: value
+            )
+        )
+    }()
+
     private static let testTransactionHash = try! TransactionHash(bytes: Data(repeating: 0, count: 32))
     
     private static let testTransaction = Transaction(
@@ -93,8 +104,9 @@ final class CardanoSendApiTests: XCTestCase {
         witnessSet: TransactionWitnessSet(),
         auxiliaryData: nil
     )
-    
-    
+
+    private static let testAssetID = "f6f49b186751e61f1fb8c64e7504e771f968cea9f4d11f5222b169e374574d54"
+
     func testSendAdaFromAccount() throws {
         let success = expectation(description: "success")
         let cardano = try Cardano(
@@ -125,6 +137,47 @@ final class CardanoSendApiTests: XCTestCase {
                          lovelace: 1000000,
                          from: [Self.testExtendedAddress.address],
                          change: Self.testChangeAddress) { res in
+            let transactionHash = try! res.get()
+            XCTAssertEqual(transactionHash, Self.testTransactionHash)
+            success.fulfill()
+        }
+        wait(for: [success], timeout: 10)
+    }
+
+    func testSendNativeTokenFromAccount() throws {
+        let success = expectation(description: "success")
+        let cardano = try Cardano(
+            info: .testnet,
+            signer: signatureProvider,
+            network: networkProvider,
+            addresses: addressManager,
+            utxos: utxoProvider
+        )
+        cardano.send.token(assetID: Self.testAssetID,
+                           to: Self.testToAddress,
+                           lovelace: 1000000,
+                           from: Self.testAccount) { res in
+            let transactionHash = try! res.get()
+            XCTAssertEqual(transactionHash, Self.testTransactionHash)
+            success.fulfill()
+        }
+        wait(for: [success], timeout: 10)
+    }
+
+    func testSendNativeTokenFromAddresses() throws {
+        let success = expectation(description: "success")
+        let cardano = try Cardano(
+            info: .testnet,
+            signer: signatureProvider,
+            network: networkProvider,
+            addresses: addressManager,
+            utxos: utxoProvider
+        )
+        cardano.send.token(assetID: Self.testAssetID,
+                           to: Self.testToAddress,
+                           lovelace: 1000000,
+                           from: [Self.testExtendedAddress.address],
+                           change: Self.testChangeAddress) { res in
             let transactionHash = try! res.get()
             XCTAssertEqual(transactionHash, Self.testTransactionHash)
             success.fulfill()

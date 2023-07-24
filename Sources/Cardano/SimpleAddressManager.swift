@@ -164,9 +164,12 @@ public class SimpleAddressManager: AddressManager, CardanoBootstrapAware {
                                 self.accountAddresses[account] = accountAddresses
 
                                 if self.accountEnterpriseAddresses[account] == nil {
-                                    self.accountEnterpriseAddresses[account] = try? account.paymentAddress(
-                                        networkID: self.cardano.info.networkID
-                                    )
+                                    let enterpriseAddress = try? account.extendedPaymentAddress(networkID: self.cardano
+                                        .info.networkID)
+                                    self.accountEnterpriseAddresses[account] = enterpriseAddress?.address
+                                    if let enterpriseAddress {
+                                        self.addresses[enterpriseAddress.address] = enterpriseAddress.path
+                                    }
                                 }
                             }
                         }
