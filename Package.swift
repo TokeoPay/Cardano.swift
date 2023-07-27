@@ -32,7 +32,8 @@ var package = Package(
                 "BigInt",
                 .product(name: "OrderedCollections", package: "swift-collections")
             ],
-            path: "Sources/Core"),
+            path: "Sources/Core",
+            swiftSettings: [.unsafeFlags(["-Onone"])]),
         .testTarget(
             name: "CoreTests",
             dependencies: ["CardanoCore"]),
