@@ -118,6 +118,10 @@ extension Keychain: SignatureProvider {
                             vkeyWitnesses.append(try keyPair.vkeyWitness(
                                 transactionHash: transactionHash
                             ))
+                        case .reward:
+                            vkeyWitnesses.append(try keyPair.vkeyWitness(
+                                transactionHash: transactionHash
+                            ))
                         case .pointer:
                             vkeyWitnesses.append(try keyPair.vkeyWitness(
                                 transactionHash: transactionHash
