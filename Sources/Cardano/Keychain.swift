@@ -57,7 +57,7 @@ public class Keychain {
         guard let keyPair = _cache[path.accountIndex!] else {
             return .failure(.accountNotFound(path: path))
         }
-        let derived = try? keyPair.derive(index: path.isChange! ? 1 : 0)
+        let derived = try? keyPair.derive(index: path.isChange! ? 1 : path.path[3])
             .derive(index: path.addressIndex!)
         guard let derivedKeyPair = derived else {
             return .failure(.derivationFailed(address: path))
