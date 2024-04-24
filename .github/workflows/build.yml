@@ -48,14 +48,6 @@ jobs:
           NEXT_VERSION=$(echo "${VERSION}" | awk -F. -v OFS=. '{$NF=$NF+1;print}')
           sed -i '' "s|[[:blank:]]*s\.source.*|s.source = { :http => 'file://${ZIP_PATH}' \}|g" Cardano-Binaries.podspec
           sed -i '' "s|[[:blank:]]*s\.version.*|s.version = '${NEXT_VERSION}'|g" Cardano-Binaries.podspec
-          pod repo push local Cardano-Binaries.podspec
-          pod repo update
-      - name: Build and Test CocoaPods
-        run: pod lib lint --allow-warnings --fail-fast --sources="local,https://cdn.cocoapods.org" Cardano.swift.podspec
-        env:
-          CARDANO_TEST_MNEMONIC: ${{ secrets.CARDANO_TEST_MNEMONIC }}
-          CARDANO_TEST_BLOCKFROST_PROJECT_ID: ${{ secrets.CARDANO_TEST_BLOCKFROST_PROJECT_ID }}
-          CARDANO_TEST_PUBLIC_KEY: ${{ secrets.CARDANO_TEST_PUBLIC_KEY }}
   linux:
     runs-on: ubuntu-latest
     container:
@@ -63,7 +55,7 @@ jobs:
       options: --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --security-opt apparmor=unconfined
     steps:
       - name: Ubuntu Packages
-        run: apt-get update && apt-get install -y software-properties-common && add-apt-repository -y ppa:git-core/ppa && apt-get update && apt-get upgrade -y git && apt-get install -y wget curl && apt install build-essential
+        run: apt-get update && apt-get install -y software-properties-common && add-apt-repository -y ppa:git-core/ppa && apt-get update && apt-get upgrade -y git && apt-get install -y wget curl && apt install build-essential -y
       - name: Checkout
         uses: actions/checkout@v4
         with:

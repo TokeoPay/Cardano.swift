@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'Cardano.swift'
-  s.version          = '0.1.4'
+  s.version          = '0.1.5'
   s.summary          = 'Swift APIs for Cardano network.'
 
   s.homepage         = 'https://github.com/tesseract-one/Cardano.swift'
