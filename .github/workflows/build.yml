@@ -2,19 +2,23 @@ name: Build & Tests
 on: [push, pull_request]
 jobs:
   macos:
-    runs-on: macOS-12
+    runs-on: macOS-14
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_13.1.app
+        run: sudo xcode-select -s /Applications/Xcode_15.3.app
       - name: Setup | Rust
-        uses: ATiltedTree/setup-rust@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          rust-version: stable
-          targets: aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios aarch64-apple-darwin x86_64-apple-darwin
+          target: |
+            aarch64-apple-ios
+            aarch64-apple-ios-sim
+            x86_64-apple-ios
+            aarch64-apple-darwin
+            x86_64-apple-darwin
       - name: Building XCFramework and binary zip
         run: bash rust/scripts/compressed_binary_macos.sh release
         env:
@@ -55,19 +59,17 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     container:
-      image: swift:5.4
+      image: swift:5.10
       options: --cap-add=SYS_PTRACE --security-opt seccomp=unconfined --security-opt apparmor=unconfined
     steps:
       - name: Ubuntu Packages
         run: apt-get update && apt-get install -y software-properties-common && add-apt-repository -y ppa:git-core/ppa && apt-get update && apt-get upgrade -y git && apt-get install -y wget curl
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Setup | Rust
-        uses: ATiltedTree/setup-rust@v1
-        with:
-          rust-version: stable
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         env:
           ACTIONS_ALLOW_UNSECURE_COMMANDS: true
       - name: Building Rust

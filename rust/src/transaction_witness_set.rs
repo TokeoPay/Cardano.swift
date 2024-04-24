@@ -367,6 +367,19 @@ impl TryFrom<TransactionWitnessSet> for RTransactionWitnessSet {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn cardano_transaction_witness_set_to_bytes(
+    tx_witness_set: TransactionWitnessSet,
+    result: &mut CData,
+    error: &mut CError,
+) -> bool {
+    handle_exception_result(|| {
+          tx_witness_set.try_into()
+          .map(|tw: RTransactionWitnessSet| tw.to_bytes())
+          .map(|bytes| bytes.into())
+    }).response(result, error)
+  }
+
+#[no_mangle]
 pub unsafe extern "C" fn cardano_transaction_witness_set_clone(
   transaction_witness_set: TransactionWitnessSet, result: &mut TransactionWitnessSet,
   error: &mut CError,

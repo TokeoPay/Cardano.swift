@@ -12,6 +12,7 @@ import Cardano
 #endif
 
 public struct BlockfrostNetworkProvider: NetworkProvider {
+    
     private let config: BlockfrostConfig
     private let addressesApi: CardanoAddressesAPI
     private let transactionsApi: CardanoTransactionsAPI
@@ -210,6 +211,7 @@ public struct BlockfrostNetworkProvider: NetworkProvider {
     
     public func submit(tx: Transaction,
                        _ cb: @escaping (Result<TransactionHash, Error>) -> Void) {
+    
         let bytes: Data
         do {
             bytes = try tx.bytes()
@@ -219,7 +221,13 @@ public struct BlockfrostNetworkProvider: NetworkProvider {
             }
             return
         }
-        let _ = transactionsApi.submitTransaction(transaction: bytes) { res in
+
+        return self.submit(tx: bytes, cb);
+    }
+    
+    public func submit(tx: Data,
+                       _ cb: @escaping (Result<TransactionHash, Error>) -> Void) {
+        let _ = transactionsApi.submitTransaction(transaction: tx) { res in
             let mapped = res.flatMap { hash in
                 Result { try TransactionHash(hex: hash.trimmingCharacters(in: ["\""])) }
             }

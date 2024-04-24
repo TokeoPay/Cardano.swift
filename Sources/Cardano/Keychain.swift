@@ -104,6 +104,66 @@ extension Keychain: SignatureProvider {
         }
     }
     
+    public func sign(txHash: String, addresses: [ExtendedAddress], _ cb: @escaping (Result<Data, any Error>) -> Void) {
+        DispatchQueue.global().async {
+            var vkeyWitnesses: Vkeywitnesses = []
+            var bootstrapWitnesses: BootstrapWitnesses = []
+            do {
+                for extended in addresses {
+                    switch self.deriveKeyPair(for: extended.path) {
+                    case .success(let keyPair):
+                        let transactionHash = try TransactionHash(hex: txHash)
+                        switch extended.address {
+                        case .base:
+                            vkeyWitnesses.append(try keyPair.vkeyWitness(
+                                transactionHash: transactionHash
+                            ))
+                        case .reward:
+                            vkeyWitnesses.append(try keyPair.vkeyWitness(
+                                transactionHash: transactionHash
+                            ))
+                        case .pointer:
+                            vkeyWitnesses.append(try keyPair.vkeyWitness(
+                                transactionHash: transactionHash
+                            ))
+                        case .enterprise:
+                            vkeyWitnesses.append(try keyPair.vkeyWitness(
+                                transactionHash: transactionHash
+                            ))
+                        case .byron(let byron):
+                            bootstrapWitnesses.append(try keyPair.bootstrapWitness(
+                                transactionHash: transactionHash,
+                                address: byron
+                            ))
+                        default:
+                            break
+                        }
+                    case .failure(let error):
+                        cb(.failure(error))
+                        return
+                    }
+                }
+            } catch {
+                cb(.failure(error))
+                return
+            }
+            var witnessSet = TransactionWitnessSet()
+            if !vkeyWitnesses.isEmpty {
+                witnessSet.vkeys = vkeyWitnesses
+            }
+            if !bootstrapWitnesses.isEmpty {
+                witnessSet.bootstraps = bootstrapWitnesses
+            }
+            
+            do {
+                let data = try witnessSet.bytes()
+                cb(.success(try witnessSet.bytes()))
+            } catch (let error) {
+                cb(.failure(error))
+            }
+        }
+    }
+    
     public func sign(tx: ExtendedTransaction, _ cb: @escaping (Result<Transaction, Error>) -> Void) {
         DispatchQueue.global().async {
             var vkeyWitnesses: Vkeywitnesses = []

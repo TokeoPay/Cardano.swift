@@ -380,6 +380,10 @@ public struct TransactionWitnessSet {
     
     public init() {}
     
+    public func bytes() throws -> Data {
+        try withCTransactionWitnessSet{ try $0.bytes() }
+    }
+    
     func clonedCTransactionWitnessSet() throws -> CCardano.TransactionWitnessSet {
         try withCTransactionWitnessSet { try $0.clone() }
     }
@@ -439,5 +443,14 @@ extension CCardano.TransactionWitnessSet {
         try RustResult<Self>.wrap { result, error in
             cardano_transaction_witness_set_clone(self, result, error)
         }.get()
+    }
+}
+
+extension CCardano.TransactionWitnessSet {
+    public func bytes() throws -> Data {
+        var bytes = try RustResult<CData>.wrap { result, error in
+            cardano_transaction_witness_set_to_bytes(self, result, error)
+        }.get()
+        return bytes.owned()
     }
 }

@@ -7,13 +7,14 @@
 
 import Foundation
 import Cardano
+import Bip39
 
 struct TestEnvironment {
     let mnemonic: [String]
     let blockfrostProjectId: String
     let publicKey: Bip32PublicKey
     
-    static var instance: Self {
+    static var instance: Self {       
         let env = ProcessInfo.processInfo.environment
         let mnemonic = env["CARDANO_TEST_MNEMONIC"]!
         let blockfrostProjectId = env["CARDANO_TEST_BLOCKFROST_PROJECT_ID"]!

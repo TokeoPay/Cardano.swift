@@ -23,6 +23,7 @@ struct NetworkProviderMock: NetworkProvider {
     var getUtxosForAddressesMock: (([Address], Int, _ cb: @escaping (Result<[TransactionUnspentOutput], Error>) -> Void) -> Void)?
     var getUtxosForTransactionMock: ((TransactionHash, _ cb: @escaping (Result<[TransactionUnspentOutput], Error>) -> Void) -> Void)?
     var submitMock: ((Transaction, _ cb: @escaping (Result<TransactionHash, Error>) -> Void) -> Void)?
+    var submitDataMock: ((Data, _ cb: @escaping (Result<TransactionHash, Error>) -> Void) -> Void)?
     
     func getSlotNumber(_ cb: @escaping (Result<Int?, Error>) -> Void) {
         getSlotNumberMock!(cb)
@@ -70,11 +71,16 @@ struct NetworkProviderMock: NetworkProvider {
                 _ cb: @escaping (Result<TransactionHash, Error>) -> Void) {
         submitMock!(tx, cb)
     }
+    func submit(tx: Data,
+                _ cb: @escaping (Result<TransactionHash, Error>) -> Void) {
+        submitDataMock!(tx, cb)
+    }
 }
 
 struct SignatureProviderMock: SignatureProvider {
     var accountsMock: ((_ cb: @escaping (Result<[Account], Error>) -> Void) -> Void)?
     var signMock: ((ExtendedTransaction, _ cb: @escaping (Result<Transaction, Error>) -> Void) -> Void)?
+    var signDataMock: ((String, _ cb: @escaping (Result<Data, Error>) -> Void) -> Void)?
     
     func accounts(_ cb: @escaping (Result<[Account], Error>) -> Void) {
         accountsMock!(cb)
@@ -83,6 +89,10 @@ struct SignatureProviderMock: SignatureProvider {
     func sign(tx: ExtendedTransaction,
               _ cb: @escaping (Result<Transaction, Error>) -> Void) {
         signMock!(tx, cb)
+    }
+    func sign(txHash: String,addresses: [CardanoCore.ExtendedAddress],
+              _ cb: @escaping (Result<Data, Error>) -> Void) {
+        signDataMock!(txHash, cb)
     }
 }
 

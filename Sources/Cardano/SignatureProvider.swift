@@ -15,4 +15,7 @@ public protocol SignatureProvider {
     
     func sign(tx: ExtendedTransaction,
               _ cb: @escaping (Result<Transaction, Error>) -> Void)
+
+    func sign(txHash: String, addresses: [ExtendedAddress],
+              _ cb: @escaping (Result<Data, Error>) -> Void)
 }

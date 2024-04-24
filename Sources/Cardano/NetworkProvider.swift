@@ -38,4 +38,7 @@ public protocol NetworkProvider {
     
     func submit(tx: Transaction,
                 _ cb: @escaping (Result<TransactionHash, Error>) -> Void)
+    
+    func submit(tx: Data,
+                _ cb: @escaping (Result<TransactionHash, Error>) -> Void)
 }
