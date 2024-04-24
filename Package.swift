@@ -3,7 +3,7 @@
 
 import PackageDescription
 
-let useLocalBinary = false
+let useLocalBinary = true
 
 var package = Package(
     name: "Cardano",
@@ -54,8 +54,8 @@ let ccardano: Target = useLocalBinary ?
         path: "rust/binaries/CCardano.xcframework") :
     .binaryTarget(
         name: "CCardano",
-        url: "https://github.com/tesseract-one/Cardano.swift/releases/download/0.1.4/CCardano.binaries.zip",
-        checksum: "50fa4995483338bab59ae6abf6bbfe50f6e05507bbcf4128087b75d049b9590e")
+        url: "https://pub-5314ba2a19a94f41912a726140440b24.r2.dev/CCardano.binaries.zip",
+        checksum: "32cb587c844ccc3e3a65a9f404ffb2dfc4b68194fa2920495465594ae61d465e")
 package.targets.append(contentsOf: [
     ccardano,
     .target(
