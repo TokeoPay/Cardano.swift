@@ -98,6 +98,14 @@ public class Keychain {
 }
 
 extension Keychain: SignatureProvider {
+    public func signData(data: Data, private_key: CardanoCore.PrivateKey, _ cb: @escaping (Result<CardanoCore.Cip30DataSignature, any Error>) -> Void) {
+        do {
+            cb(.success(try private_key.signData(message: data).toCip30DataSignature()))
+        } catch (let err) {
+            cb(.failure(err))
+        }
+    }
+    
     public func accounts(_ cb: @escaping (Result<[Account], Error>) -> Void) {
         DispatchQueue.global().async {
             cb(.success(self.accounts()))

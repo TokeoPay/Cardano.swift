@@ -52,4 +52,12 @@ extension PrivateKey {
             }
         }.get()
     }
+    
+    public func signData(message: Data) throws -> DataSignature {
+        try message.withCData { message in
+            RustResult<CCardano.DataSignature>.wrap { result, error in
+                cardano_private_key_sign_data(self, message, result, error)
+            }
+        }.get()
+    }
 }

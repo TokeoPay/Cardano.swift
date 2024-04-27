@@ -1,3 +1,5 @@
+use crate::string::IntoCString;
+
 use super::data::CData;
 use super::ed25519_signature::Ed25519Signature;
 use super::error::CError;
@@ -8,6 +10,9 @@ use cardano_serialization_lib::{
   crypto::PrivateKey as RPrivateKey, impl_mockchain::key::EitherEd25519SecretKey,
 };
 use std::convert::{TryFrom, TryInto};
+use cardano_message_signing as ms;
+use ms::cbor::CBORValue;
+use ms::utils::ToBytes;
 
 pub const EXTENDED_PRIVATE_KEY_LENGTH: usize = 64;
 pub const NORMAL_PRIVATE_KEY_LENGTH: usize = 32;
@@ -106,4 +111,87 @@ pub unsafe extern "C" fn cardano_private_key_sign(
       .map(|ed25519_signature| ed25519_signature.into())
   })
   .response(result, error)
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct DataSignature {
+    signature: CData,
+    key: CData,
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn cardano_private_key_sign_data(
+  private_key: PrivateKey, message: CData, result: &mut DataSignature, error: &mut CError,
+) -> bool {
+  handle_exception_result(|| {
+    let res: std::prelude::v1::Result<std::prelude::v1::Result<DataSignature, CError>, CError> = private_key
+        .try_into()
+        .map(|sk: RPrivateKey| {
+            let payload: &[u8] = message.unowned().unwrap();
+
+            let mut key = ms::COSEKey::new(&ms::Label::new_int(&ms::utils::Int::new_i32(0)));
+
+            key.set_algorithm_id(&ms::Label::from_algorithm_id(
+                ms::builders::AlgorithmId::EdDSA,
+            ));
+
+            match key
+                .set_header(
+                    &ms::Label::new_int(&ms::utils::Int::new_i32(1)),
+                    &CBORValue::new_int(&ms::utils::Int::new_i32(6)),
+                )
+                .map_err(|js_err| {
+                    CError::Error(
+                        js_err
+                            .as_string()
+                            .unwrap_or("Error".to_string())
+                            .into_cstr(),
+                    )
+                }) {
+                Ok(_) => (),
+                Err(e) => return Err(e),
+            };
+
+            match key
+                .set_header(
+                    &ms::Label::new_int(&ms::utils::Int::new_i32(2)),
+                    &CBORValue::new_bytes(sk.to_public().as_bytes()),
+                )
+                .map_err(|js_err| {
+                    CError::Error(
+                        js_err
+                            .as_string()
+                            .unwrap_or("Error".to_string())
+                            .into_cstr(),
+                    )
+                }) {
+                Ok(_) => (),
+                Err(e) => return Err(e),
+            };
+            let protected_headers = ms::HeaderMap::new();
+            let protected_serialized = ms::ProtectedHeaderMap::new(&protected_headers);
+            let unprotected = ms::HeaderMap::new();
+            let headers = ms::Headers::new(&protected_serialized, &unprotected);
+
+            let builder =
+                ms::builders::COSESign1Builder::new(&headers, payload.to_vec(), false);
+            // builder.set_external_aad(external_aad.clone());
+
+            let to_sign = builder.make_data_to_sign().to_bytes();
+            let signed_sig_struct = sk.sign(&to_sign).to_bytes();
+            let cose_sign1 = builder.build(signed_sig_struct);
+            Ok(DataSignature {
+                signature: cose_sign1.to_bytes().into(),
+                key: key.to_bytes().into(),
+            })
+        });
+      
+      match res {
+        Ok(x) => x,
+        Err(e) => Err(e)
+      }
+
+})
+.response(result, error)
 }

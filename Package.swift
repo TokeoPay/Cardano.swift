@@ -3,7 +3,7 @@
 
 import PackageDescription
 
-let useLocalBinary = false
+let useLocalBinary = true
 
 var package = Package(
     name: "Cardano",
@@ -54,8 +54,8 @@ let ccardano: Target = useLocalBinary ?
         path: "rust/binaries/CCardano.xcframework") :
     .binaryTarget(
         name: "CCardano",
-        url: "https://pub-5314ba2a19a94f41912a726140440b24.r2.dev/CCardano.binaries.zip",
-        checksum: "32cb587c844ccc3e3a65a9f404ffb2dfc4b68194fa2920495465594ae61d465e")
+        url: "https://pub-5314ba2a19a94f41912a726140440b24.r2.dev/CCardano.binaries.add_sign_data.zip",
+        checksum: "2f1edb4b4fb0f54515002b340055b579c0c82b58259e67cb9bf6b17a3a1df920")
 package.targets.append(contentsOf: [
     ccardano,
     .target(
