@@ -19,6 +19,6 @@ public protocol SignatureProvider {
     func sign(txHash: String, addresses: [ExtendedAddress],
               _ cb: @escaping (Result<Data, Error>) -> Void)
     
-    func signData(data: Data, private_key: PrivateKey,
+    func signData(data: Data, extended_address: ExtendedAddress,
                   _ cb: @escaping (Result<Cip30DataSignature, Error>) -> Void)
 }

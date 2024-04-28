@@ -32,6 +32,10 @@ struct KeyPair {
                           address: ByronAddress) throws -> BootstrapWitness {
         try BootstrapWitness(txBodyHash: transactionHash, addr: address, key: _sk)
     }
+    
+    func signData(data: Data) throws -> Cip30DataSignature {
+        try _sk.toRawKey().signData(message: data).toCip30DataSignature()
+    }
 }
 
 public enum KeychainError: Error {
@@ -98,9 +102,13 @@ public class Keychain {
 }
 
 extension Keychain: SignatureProvider {
-    public func signData(data: Data, private_key: CardanoCore.PrivateKey, _ cb: @escaping (Result<CardanoCore.Cip30DataSignature, any Error>) -> Void) {
+    public func signData(data: Data, extended_address: ExtendedAddress, _ cb: @escaping (Result<CardanoCore.Cip30DataSignature, any Error>) -> Void) {
         do {
-            cb(.success(try private_key.signData(message: data).toCip30DataSignature()))
+            switch self.deriveKeyPair(for: extended_address.path) {
+            case .success(let kp):
+                cb(.success(try kp.signData(data: data)))
+                   case .failure(let err): cb(.failure(err))
+            }
         } catch (let err) {
             cb(.failure(err))
         }
