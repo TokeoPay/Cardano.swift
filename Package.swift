@@ -3,7 +3,7 @@
 
 import PackageDescription
 
-let useLocalBinary = true
+let useLocalBinary = false
 
 var package = Package(
     name: "Cardano",
