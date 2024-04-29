@@ -53,10 +53,12 @@ extension PrivateKey {
         }.get()
     }
     
-    public func signData(message: Data) throws -> DataSignature {
-        try message.withCData { message in
-            RustResult<CCardano.DataSignature>.wrap { result, error in
-                cardano_private_key_sign_data(self, message, result, error)
+    public func signData(address: Address, message: Data) throws -> DataSignature {
+        try address.withCAddress {addr in
+            message.withCData { message in
+                RustResult<CCardano.DataSignature>.wrap { result, error in
+                    cardano_private_key_sign_data(addr, self, message, result, error)
+                }
             }
         }.get()
     }

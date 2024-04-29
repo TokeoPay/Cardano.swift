@@ -33,8 +33,8 @@ struct KeyPair {
         try BootstrapWitness(txBodyHash: transactionHash, addr: address, key: _sk)
     }
     
-    func signData(data: Data) throws -> Cip30DataSignature {
-        try _sk.toRawKey().signData(message: data).toCip30DataSignature()
+    func signData(address: Address, data: Data) throws -> Cip30DataSignature {
+        try _sk.toRawKey().signData(address: address, message: data).toCip30DataSignature()
     }
 }
 
@@ -106,7 +106,7 @@ extension Keychain: SignatureProvider {
         do {
             switch self.deriveKeyPair(for: extended_address.path) {
             case .success(let kp):
-                cb(.success(try kp.signData(data: data)))
+                cb(.success(try kp.signData(address: extended_address.address, data: data)))
                    case .failure(let err): cb(.failure(err))
             }
         } catch (let err) {
