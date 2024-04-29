@@ -16,6 +16,10 @@ public struct Cip30DataSignature {
         self.key = ds.key.copied().hex(prefix: false)
         self.signature = ds.signature.copied().hex(prefix: false)
     }
+    
+    public func toJson() -> String {
+        return String(format: "{\"key\": \"{0}\", \"signature\": \"{1}\"}", self.key, self.signature)
+    }
 }
 
 public typealias DataSignature = CCardano.DataSignature
