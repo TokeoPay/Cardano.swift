@@ -1,16 +1,6 @@
-// use crate::public_key;
 use crate::string::IntoCString;
-
 use super::data::CData;
 use super::ed25519_signature::Ed25519Signature;
-
-// use super::address::address::Address;
-// use super::address::base::BaseAddress;
-// use super::address::byron::ByronAddress;
-// use super::address::enterprise::EnterpriseAddress;
-// use super::address::pointer::PointerAddress;
-// use super::address::reward::RewardAddress;
-
 use super::error::CError;
 use super::panic::*;
 use super::ptr::*;
@@ -21,7 +11,6 @@ use cardano_serialization_lib::{
 };
 use ms::cbor::CBORValue;
 use ms::utils::ToBytes;
-use std::any::Any;
 use std::convert::{TryFrom, TryInto};
 
 pub const EXTENDED_PRIVATE_KEY_LENGTH: usize = 64;
