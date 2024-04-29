@@ -5,8 +5,10 @@ use super::error::CError;
 use super::panic::*;
 use super::ptr::*;
 use super::public_key::PublicKey;
+use super::address::address::Address;
 use cardano_message_signing as ms;
 use cardano_serialization_lib::{
+  address::Address as RAddress,
     crypto::PrivateKey as RPrivateKey, impl_mockchain::key::EitherEd25519SecretKey,
 };
 use ms::cbor::CBORValue;
@@ -130,6 +132,7 @@ pub struct DataSignature {
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_private_key_sign_data(
+    address: Address,
     private_key: PrivateKey,
     message: CData,
     result: &mut DataSignature,
@@ -137,7 +140,10 @@ pub unsafe extern "C" fn cardano_private_key_sign_data(
 ) -> bool {
     handle_exception_result(|| {
         let res: std::prelude::v1::Result<std::prelude::v1::Result<DataSignature, CError>, CError> =
-            private_key.try_into().map(|sk: RPrivateKey| {
+
+            TryInto::<RAddress>::try_into(address).zip(
+              TryInto::<RPrivateKey>::try_into(private_key)
+            ).map(|(addr, sk)| {
                 let payload: &[u8] = message.unowned().unwrap();
 
                 let mut key = ms::COSEKey::new(&ms::Label::new_int(&ms::utils::Int::new_i32(0)));
@@ -221,7 +227,7 @@ pub unsafe extern "C" fn cardano_private_key_sign_data(
                 match protected_headers
                     .set_header(
                         &ms::Label::new_text("address".to_string()),
-                        &CBORValue::new_bytes(sk.to_public().as_bytes()),
+                        &CBORValue::new_bytes(addr.to_bytes()),
                     )
                     .map_err(|js_err| {
                         CError::Error(
