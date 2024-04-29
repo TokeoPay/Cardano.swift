@@ -14,6 +14,11 @@ pub struct RewardAddress {
   payment: StakeCredential,
 }
 
+impl RewardAddress {
+  pub fn payment_cred(&self) -> StakeCredential {
+    self.payment.clone()
+  }
+}
 struct MRAddress {
   network: u8,
   payment: RStakeCredential,

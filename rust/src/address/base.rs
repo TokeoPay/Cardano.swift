@@ -15,6 +15,12 @@ pub struct BaseAddress {
   stake: StakeCredential
 }
 
+impl BaseAddress {
+  pub fn payment_cred(&self) -> StakeCredential {
+    self.payment.clone()
+  }
+}
+
 // For transmute black magick
 struct MBAddress {
   network: u8,

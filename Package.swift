@@ -55,7 +55,7 @@ let ccardano: Target = useLocalBinary ?
     .binaryTarget(
         name: "CCardano",
         url: "https://pub-5314ba2a19a94f41912a726140440b24.r2.dev/CCardano.binaries.add_sign_data.zip",
-        checksum: "2f1edb4b4fb0f54515002b340055b579c0c82b58259e67cb9bf6b17a3a1df920")
+        checksum: "f4b5f799e08936340a25d979688cbfd1ac588c1741b8ccddc1dad18fc50242a7")
 package.targets.append(contentsOf: [
     ccardano,
     .target(

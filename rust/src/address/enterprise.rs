@@ -15,6 +15,12 @@ pub struct EnterpriseAddress {
   payment: StakeCredential
 }
 
+impl EnterpriseAddress {
+  pub fn payment_cred(&self) -> StakeCredential {
+    self.payment.clone()
+  }
+}
+
 struct MEAddress {
   network: u8,
   payment: RStakeCredential
