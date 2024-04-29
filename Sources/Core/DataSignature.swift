@@ -8,17 +8,37 @@
 import Foundation
 import CCardano
 
-public struct Cip30DataSignature {
-    let signature: String
-    let key: String
+class Cip30DataSignatureError: Error {
+    public let message: String
+    
+    init(message: String) {
+        self.message = message
+    }
+}
+
+public struct Cip30DataSignature: Codable {
+    public let signature: String
+    public let key: String
     
     init(ds: DataSignature) {
         self.key = ds.key.copied().hex(prefix: false)
         self.signature = ds.signature.copied().hex(prefix: false)
     }
     
-    public func toJson() -> String {
-        return String(format: "{\"key\": \"{0}\", \"signature\": \"{1}\"}", self.key, self.signature)
+    public func toJson() -> Result<String, Error> {
+        let encoder = JSONEncoder()
+        do {
+            let data = try encoder.encode(self)
+            
+            if let str = String(data: data, encoding: .utf8) {
+                return Result.success(str)
+            }
+            
+            return Result.failure(Cip30DataSignatureError(message: "Cannot parse to JSON"));
+
+        } catch (let err) {
+            return Result.failure(err)
+        }
     }
 }
 
