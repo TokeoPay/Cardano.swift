@@ -105,6 +105,10 @@ public enum Address: Hashable {
         try withCAddress { try $0.clone() }
     }
     
+    func matchPubKeyHashes(keyHashes: Ed25519KeyHashes) throws -> CCardano.AddressMatch {
+        try withCAddress { try $0.matchKeyHashes(keyHashes: keyHashes) }
+    }
+
     func withCAddress<T>(
         fn: @escaping (CCardano.Address) throws -> T
     ) rethrows -> T {
@@ -143,6 +147,26 @@ public enum Address: Hashable {
                 return try fn(address)
             }
         }
+    }
+}
+
+//enum AddressMatch {
+//    case PaymentKeyMatch
+//    case StakeKeyMatch
+//    case NoMatch
+//}
+
+public typealias AddressMatch = CCardano.AddressMatch
+
+extension AddressMatch: CType {}
+
+extension CCardano.Address {
+    public func matchKeyHashes(keyHashes: Ed25519KeyHashes) throws -> CCardano.AddressMatch {
+        try keyHashes.withCArray { kh in
+            RustResult<CCardano.AddressMatch>.wrap { addressMatch, error in
+                cardano_address_match_pkh(self, kh, addressMatch, error)
+            }
+        }.get()
     }
 }
 
