@@ -105,7 +105,7 @@ public enum Address: Hashable {
         try withCAddress { try $0.clone() }
     }
     
-    func matchPubKeyHashes(keyHashes: Ed25519KeyHashes) throws -> CCardano.AddressMatch {
+    public func matchPubKeyHashes(keyHashes: Ed25519KeyHashes) throws -> CCardano.AddressMatch {
         try withCAddress { try $0.matchKeyHashes(keyHashes: keyHashes) }
     }
 
