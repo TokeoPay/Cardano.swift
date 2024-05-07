@@ -17,7 +17,6 @@ use cardano_serialization_lib::{
   },
   utils::{from_bignum, to_bignum},
   ProtocolParamUpdate as RProtocolParamUpdate, ProtocolVersion as RProtocolVersion,
-  ProtocolVersions as RProtocolVersions,
 };
 use std::convert::{TryFrom, TryInto};
 
@@ -103,35 +102,6 @@ impl From<RProtocolVersion> for ProtocolVersion {
   }
 }
 
-pub type ProtocolVersions = CArray<ProtocolVersion>;
-
-impl TryFrom<ProtocolVersions> for RProtocolVersions {
-  type Error = CError;
-
-  fn try_from(protocol_versions: ProtocolVersions) -> Result<Self> {
-    let vec = unsafe { protocol_versions.unowned()? };
-    let mut protocol_versions = Self::new();
-    for protocol_version in vec.to_vec() {
-      protocol_versions.add(&protocol_version.into())
-    }
-    Ok(protocol_versions)
-  }
-}
-
-impl From<RProtocolVersions> for ProtocolVersions {
-  fn from(protocol_versions: RProtocolVersions) -> Self {
-    (0..protocol_versions.len())
-      .map(|index| protocol_versions.get(index))
-      .map(|protocol_version| protocol_version.into())
-      .collect::<Vec<ProtocolVersion>>()
-      .into()
-  }
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn cardano_protocol_versions_free(protocol_versions: &mut ProtocolVersions) {
-  protocol_versions.free();
-}
 
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -312,7 +282,7 @@ pub struct ProtocolParamUpdate {
   treasury_growth_rate: COption<UnitInterval>,
   d: COption<UnitInterval>,
   extra_entropy: COption<Nonce>,
-  protocol_version: COption<ProtocolVersions>,
+  protocol_version: COption<ProtocolVersion>,
   min_pool_cost: COption<Coin>,
   ada_per_utxo_byte: COption<Coin>,
   cost_models: COption<Costmdls>,
@@ -337,8 +307,11 @@ impl TryFrom<ProtocolParamUpdate> for RProtocolParamUpdate {
       .map(|ee| ee.try_into())
       .transpose()
       .zip({
-        let protocol_version: Option<ProtocolVersions> = ppu.protocol_version.into();
-        protocol_version.map(|pv| pv.try_into()).transpose()
+        let protocol_version: Option<ProtocolVersion> = ppu.protocol_version.into();
+
+        Ok(protocol_version.map(|ppv| {
+          RProtocolVersion::new(ppv.major, ppv.minor)
+        }))
       })
       .zip({
         let cost_models: Option<Costmdls> = ppu.cost_models.into();

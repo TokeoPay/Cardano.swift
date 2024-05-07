@@ -11,6 +11,7 @@ use cardano_serialization_lib::address::{
 };
 
 pub type Slot = u32;
+pub type SlotBigNum = u64;
 pub type CertificateIndex = u32;
 
 #[repr(C)]
@@ -24,8 +25,8 @@ pub struct Pointer {
 impl From<RPointer> for Pointer {
   fn from(ptr: RPointer) -> Self {
     Self {
-      slot: ptr.slot(), tx_index: ptr.tx_index(),
-      cert_index: ptr.cert_index()
+      slot: ptr.slot().unwrap(), tx_index: ptr.tx_index().unwrap(),
+      cert_index: ptr.cert_index().unwrap()
     }
   }
 }

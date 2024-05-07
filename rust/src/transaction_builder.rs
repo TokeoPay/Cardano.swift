@@ -1,6 +1,6 @@
 use crate::address::address::Address;
 use crate::address::byron::ByronAddress;
-use crate::address::pointer::Slot;
+use crate::address::pointer::{Slot, SlotBigNum};
 use crate::array::*;
 use crate::certificate::Certificates;
 use crate::data::CData;
@@ -9,17 +9,20 @@ use crate::linear_fee::{Coin, LinearFee};
 use crate::option::COption;
 use crate::panic::*;
 use crate::ptr::*;
-use crate::stake_credential::{Ed25519KeyHash, ScriptHash};
-use crate::transaction_body::{Mint, TransactionBody};
+use crate::stake_credential::{Ed25519KeyHash, Ed25519KeyHashes, ScriptHash};
+use crate::string::IntoCString;
+use crate::transaction_body::{Mint, ScriptDataHash, TransactionBody};
 use crate::transaction_input::TransactionInput;
 use crate::transaction_metadata::{AuxiliaryData, NativeScripts};
 use crate::transaction_output::{TransactionOutput, TransactionOutputs};
 use crate::transaction_unspent_output::TransactionUnspentOutputs;
 use crate::value::Value;
 use crate::withdrawals::Withdrawals;
-use cardano_serialization_lib::{
+// use cardano_serialization_lib::Ed25519KeyHashes;
+use cardano_serialization_lib::{ Ed25519KeyHashes as REd25519KeyHashes,
   address::{Address as RAddress, ByronAddress as RByronAddress},
-  crypto::{Ed25519KeyHash as REd25519KeyHash, ScriptHash as RScriptHash},
+  crypto::{Ed25519KeyHash as REd25519KeyHash, ScriptHash as RScriptHash, 
+    ScriptDataHash as RScriptDataHash},
   fees::LinearFee as RLinearFee,
   metadata::AuxiliaryData as RAuxiliaryData,
   tx_builder::{
@@ -131,6 +134,19 @@ pub unsafe extern "C" fn cardano_mock_witness_set_free(mock_witness_set: &mut Mo
   mock_witness_set.free()
 }
 
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct SubCoin {
+  numerator: BigNum,
+  denominator: BigNum,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ExUnitPrices {
+  mem_price: SubCoin,
+  step_price: SubCoin,
+}
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct TransactionBuilderConfig {
@@ -140,6 +156,7 @@ pub struct TransactionBuilderConfig {
   max_value_size: u32,
   max_tx_size: u32,
   coins_per_utxo_word: Coin,
+  ex_unit_prices: COption<ExUnitPrices>, // protocol parameter
   prefer_pure_change: bool,
 }
 
@@ -151,6 +168,7 @@ pub struct TTransactionBuilderConfig {
   max_value_size: u32,
   max_tx_size: u32,
   coins_per_utxo_word: RCoin,
+  ex_unit_prices: COption<ExUnitPrices>, // protocol parameter
   prefer_pure_change: bool,
 }
 
@@ -163,6 +181,7 @@ impl From<TransactionBuilderConfig> for TTransactionBuilderConfig {
       max_value_size: transaction_builder_config.max_value_size,
       max_tx_size: transaction_builder_config.max_tx_size,
       coins_per_utxo_word: to_bignum(transaction_builder_config.coins_per_utxo_word),
+      ex_unit_prices: transaction_builder_config.ex_unit_prices,
       prefer_pure_change: transaction_builder_config.prefer_pure_change,
     }
   }
@@ -177,6 +196,7 @@ impl From<TTransactionBuilderConfig> for TransactionBuilderConfig {
       max_value_size: transaction_builder_config.max_value_size,
       max_tx_size: transaction_builder_config.max_tx_size,
       coins_per_utxo_word: from_bignum(&transaction_builder_config.coins_per_utxo_word),
+      ex_unit_prices: transaction_builder_config.ex_unit_prices.into(),
       prefer_pure_change: transaction_builder_config.prefer_pure_change,
     }
   }
@@ -213,6 +233,15 @@ impl Free for TxBuilderInput {
 struct TTxBuilderInput {
   input: RTransactionInput,
   amount: RValue,
+}
+
+impl Clone for TTxBuilderInput {
+  fn clone(&self) -> Self {
+      Self {
+        input: self.input.clone(),
+        amount: self.amount.clone(),
+      }
+  }
 }
 
 impl TryFrom<TxBuilderInput> for TTxBuilderInput {
@@ -286,16 +315,18 @@ impl From<RCoinSelectionStrategyCIP2> for CoinSelectionStrategyCIP2 {
 pub struct TransactionBuilder {
   config: TransactionBuilderConfig,
   inputs: CArray<TxBuilderInput>,
+  collateral: CArray<TxBuilderInput>,
   outputs: TransactionOutputs,
   fee: COption<Coin>,
-  ttl: COption<Slot>,
+  ttl: COption<SlotBigNum>,
   certs: COption<Certificates>,
   withdrawals: COption<Withdrawals>,
   auxiliary_data: COption<AuxiliaryData>,
-  validity_start_interval: COption<Slot>,
-  input_types: MockWitnessSet,
+  validity_start_interval: COption<SlotBigNum>,
   mint: COption<Mint>,
   mint_scripts: COption<NativeScripts>,
+  script_data_hash: Option<ScriptDataHash>,
+  required_signers: Ed25519KeyHashes,
 }
 
 impl Free for TransactionBuilder {
@@ -305,7 +336,6 @@ impl Free for TransactionBuilder {
     self.certs.free();
     self.withdrawals.free();
     self.auxiliary_data.free();
-    self.input_types.free();
     self.mint_scripts.free();
   }
 }
@@ -314,16 +344,19 @@ impl Free for TransactionBuilder {
 pub struct TTransactionBuilder {
   config: RTransactionBuilderConfig,
   inputs: Vec<TTxBuilderInput>,
+  collateral: Vec<TTxBuilderInput>,
   outputs: RTransactionOutputs,
   fee: Option<RCoin>,
-  ttl: Option<Slot>,
+  ttl: Option<SlotBigNum>,
   certs: Option<RCertificates>,
   withdrawals: Option<RWithdrawals>,
   auxiliary_data: Option<RAuxiliaryData>,
-  validity_start_interval: Option<Slot>,
-  input_types: TMockWitnessSet,
+  validity_start_interval: Option<SlotBigNum>,
+  // input_types: TMockWitnessSet,
   mint: Option<RMint>,
   mint_scripts: Option<RNativeScripts>,
+  script_data_hash: Option<ScriptDataHash>,
+  required_signers: Ed25519KeyHashes,
 }
 
 impl TryFrom<TransactionBuilder> for TTransactionBuilder {
@@ -351,7 +384,6 @@ impl TryFrom<TransactionBuilder> for TTransactionBuilder {
           .map(|auxiliary_data| auxiliary_data.try_into())
           .transpose()
       })
-      .zip(tb.input_types.try_into())
       .zip({
         let mint: Option<Mint> = tb.mint.into();
         mint.map(|mint| mint.try_into()).transpose()
@@ -362,25 +394,29 @@ impl TryFrom<TransactionBuilder> for TTransactionBuilder {
           .map(|mint_scripts| mint_scripts.try_into())
           .transpose()
       })
+      .zip( TryInto::<Ed25519KeyHashes>::try_into(REd25519KeyHashes::new())) 
       .map(
         |(
-          ((((((inputs, outputs), certs), withdrawals), auxiliary_data), input_types), mint),
-          mint_scripts,
+          ((((((inputs, outputs), certs), withdrawals), auxiliary_data), mint),
+          mint_scripts), keyHashes
         )| {
           let fee: Option<Coin> = tb.fee.into();
           Self {
             config: tb.config.into(),
-            inputs,
+            inputs: inputs.clone(),
             outputs,
+            collateral: inputs, //FIXME: This is wrong!
             fee: fee.map(|fee| to_bignum(fee)),
             ttl: tb.ttl.into(),
             certs: certs.into(),
             withdrawals: withdrawals.into(),
             auxiliary_data: auxiliary_data.into(),
             validity_start_interval: tb.validity_start_interval.into(),
-            input_types,
+            // input_types,
             mint: mint.into(),
             mint_scripts: mint_scripts.into(),
+            script_data_hash: Option::None,
+            required_signers: keyHashes,
           }
         },
       )
@@ -407,20 +443,22 @@ impl TryFrom<TTransactionBuilder> for TransactionBuilder {
           .map(|auxiliary_data| auxiliary_data.try_into())
           .transpose(),
       )
-      .zip(tb.input_types.try_into())
+   
       .zip(tb.mint.map(|mint| mint.try_into()).transpose())
       .zip(
         tb.mint_scripts
           .map(|mint_scripts| mint_scripts.try_into())
           .transpose(),
       )
+      .zip( TryInto::<Ed25519KeyHashes>::try_into(REd25519KeyHashes::new()))
       .map(
         |(
-          ((((((inputs, outputs), certs), withdrawals), auxiliary_data), input_types), mint),
-          mint_scripts,
+          ((((((inputs, outputs), certs), withdrawals), auxiliary_data), mint),
+          mint_scripts), keyHashes,
         )| Self {
           config,
-          inputs: inputs.into(),
+          inputs: inputs.clone().into(),
+          collateral: inputs.into(), //FIXME: This is wrong!
           outputs,
           fee,
           ttl,
@@ -428,9 +466,10 @@ impl TryFrom<TTransactionBuilder> for TransactionBuilder {
           withdrawals: withdrawals.into(),
           auxiliary_data: auxiliary_data.into(),
           validity_start_interval,
-          input_types,
           mint: mint.into(),
           mint_scripts: mint_scripts.into(),
+          required_signers: keyHashes ,
+          script_data_hash: None,
         },
       )
   }
@@ -440,11 +479,22 @@ impl TryFrom<TransactionBuilder> for RTransactionBuilder {
   type Error = CError;
 
   fn try_from(transaction_builder: TransactionBuilder) -> Result<Self> {
-    transaction_builder
-      .try_into()
-      .map(|transaction_builder: TTransactionBuilder| unsafe {
-        std::mem::transmute(transaction_builder)
-      })
+    // transaction_builder
+    //   .try_into()
+    //   .map(|transaction_builder: TTransactionBuilder| unsafe {
+    //     std::mem::transmute(transaction_builder)
+    //   });
+
+    let r = TryInto::<RTransactionBuilderConfig>::try_into(transaction_builder.config)
+     .and_then(|cfg| {
+       let tx_builder = Self::new(&cfg);
+
+       //FIXME: Populate!!!
+
+       Ok(tx_builder)
+     });
+
+     r.map_err(|e: std::convert::Infallible| { CError::Error("".into_cstr()) })
   }
 }
 
@@ -452,9 +502,29 @@ impl TryFrom<RTransactionBuilder> for TransactionBuilder {
   type Error = CError;
 
   fn try_from(transaction_builder: RTransactionBuilder) -> Result<Self> {
-    let transaction_builder: TTransactionBuilder =
-      unsafe { std::mem::transmute(transaction_builder) };
-    transaction_builder.try_into()
+    // let transaction_builder: TTransactionBuilder =
+    //   unsafe { std::mem::transmute(transaction_builder) };
+    // transaction_builder.try_into()
+
+    //FIXME: Populate!!!
+    Ok(Self {
+      auxiliary_data: todo!(),
+      config: todo!(),
+      inputs: todo!(),
+      collateral: todo!(),
+      outputs: todo!(),
+      fee: todo!(),
+      ttl: todo!(),
+      certs: todo!(),
+      withdrawals: todo!(),
+      validity_start_interval: todo!(),
+      mint: todo!(),
+      mint_scripts: todo!(),
+      script_data_hash: todo!(),
+      required_signers: todo!(),
+    })
+
+
   }
 }
 

@@ -8,14 +8,27 @@ keywords = [ "Tesseract", "Cardano", "C" ]
 edition = "2018"
 
 [dependencies]
-cardano-serialization-lib = "10.0.4"
+#  cardano-serialization-lib = "10.2.0"
+cardano-serialization-lib = { path="./patches/cardano-serialization-lib-10.2.0" }
 linked-hash-map = "0.5.3"
 serde_json = "1.0.57"
 num-bigint = "0.4.0"
 cardano-message-signing = "1.0.1"
+getrandom = "0.2.14"
+hex = "0.4.3"
+cardano-multiplatform-lib = { version = "5.3.1" }
+cml-core = "5.3.1"
+cml-chain = "5.3.1"
+cml-crypto = "5.3.1"
+
+[metadata.patch]
+crates = ["cardano-serialization-lib"]
+
+# [patch.crates-io]
+# cardano-serialization-lib = { path="./target/patch/cardano-serialization-lib-10.2.0" }
 
 [build-dependencies]
-cbindgen = "0.23.0"
+cbindgen = "0.26.0"
 
 [lib]
 name = "cardano"

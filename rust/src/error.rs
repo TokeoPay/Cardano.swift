@@ -10,7 +10,8 @@ pub enum CError {
     Panic(CharPtr),
     Utf8Error(CharPtr),
     DeserializeError(CharPtr),
-    Error(CharPtr)
+    Error(CharPtr),
+    CoinSelectionInsufficientFunds(CharPtr),
 }
 
 impl Free for CError {

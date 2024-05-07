@@ -36,6 +36,7 @@ impl From<RScriptHashNamespace> for ScriptHashNamespace {
   fn from(script_hash_namespace: RScriptHashNamespace) -> Self {
     match script_hash_namespace {
       RScriptHashNamespace::NativeScript => Self::NativeScriptKind,
+        RScriptHashNamespace::PlutusScript => todo!(),
     }
   }
 }
@@ -134,7 +135,7 @@ pub unsafe extern "C" fn cardano_native_script_hash(
   handle_exception_result(|| {
     native_script
       .try_into()
-      .map(|native_script: RNativeScript| native_script.hash(namespace.into()))
+      .map(|native_script: RNativeScript| native_script.hash())
       .and_then(|key_hash| key_hash.try_into())
   })
   .response(result, error)
@@ -365,7 +366,7 @@ impl From<TimelockStart> for RTimelockStart {
 impl From<RTimelockStart> for TimelockStart {
   fn from(timelock_start: RTimelockStart) -> Self {
     Self {
-      slot: timelock_start.slot(),
+      slot: timelock_start.slot().unwrap(),
     }
   }
 }
@@ -385,7 +386,7 @@ impl From<TimelockExpiry> for RTimelockExpiry {
 impl From<RTimelockExpiry> for TimelockExpiry {
   fn from(timelock_expiry: RTimelockExpiry) -> Self {
     Self {
-      slot: timelock_expiry.slot(),
+      slot: timelock_expiry.slot().unwrap(),
     }
   }
 }
