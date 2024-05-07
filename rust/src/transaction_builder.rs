@@ -325,7 +325,7 @@ pub struct TransactionBuilder {
   validity_start_interval: COption<SlotBigNum>,
   mint: COption<Mint>,
   mint_scripts: COption<NativeScripts>,
-  script_data_hash: Option<ScriptDataHash>,
+  script_data_hash: COption<ScriptDataHash>,
   required_signers: Ed25519KeyHashes,
 }
 
@@ -469,7 +469,7 @@ impl TryFrom<TTransactionBuilder> for TransactionBuilder {
           mint: mint.into(),
           mint_scripts: mint_scripts.into(),
           required_signers: keyHashes ,
-          script_data_hash: None,
+          script_data_hash: COption::None,
         },
       )
   }
