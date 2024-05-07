@@ -1,5 +1,10 @@
+# Rust
+./rust/**/target/*
+
+
 # Xcode
-#
+
+
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
 
 ## User settings
@@ -92,3 +97,4 @@ iOSInjectionProject/
 
 # OS X
 .DS_Store
+rust/patches/cardano-serialization-lib-10.2.0/target

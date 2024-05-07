@@ -125,6 +125,7 @@ impl TryFrom<RTransactionUnspentOutputs> for TransactionUnspentOutputs {
     }
 }
 
+
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct SwiftUTXO {
