@@ -8,7 +8,7 @@ use cardano_serialization_lib::utils::min_ada_required;
 use cardano_serialization_lib::utils::{from_bignum, to_bignum, Value as RValue};
 
 use cml_chain::assets::AssetBundle;
-use cml_chain::assets::MultiAsset as CML_MultiAsset;
+
 use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 

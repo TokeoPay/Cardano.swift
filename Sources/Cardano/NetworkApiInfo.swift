@@ -9,6 +9,8 @@ import Foundation
 #if !COCOAPODS
 import CardanoCore
 #endif
+import struct CCardano.ExUnitPrices
+import struct CCardano.SubCoin
 
 public struct NetworkApiInfo: Equatable, Hashable {
     public let networkID: UInt8

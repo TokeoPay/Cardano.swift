@@ -9,6 +9,7 @@ import Foundation
 #if !COCOAPODS
 import CardanoCore
 #endif
+import struct CCardano.COption_ExUnitPrices
 
 public enum CardanoSendError: Error {
     case invalidAssetID
@@ -59,7 +60,7 @@ public struct CardanoSendApi: CardanoApi {
                     lovelace amount: UInt64,
                     from: [Address],
                     change: Address,
-                    maxSlots: UInt32 = 300,
+                    maxSlots: UInt64 = 300,
                     _ cb: @escaping ApiCallback<TransactionHash>) {
         let cardano = self.cardano!
         adaTransaction(to: to,
@@ -94,7 +95,7 @@ public struct CardanoSendApi: CardanoApi {
                                lovelace amount: UInt64,
                                from: [Address],
                                change: Address,
-                               maxSlots: UInt32 = 300,
+                               maxSlots: UInt64 = 300,
                                _ cb: @escaping ApiCallback<(TransactionBuilder, [TransactionUnspentOutput])>) {
         let cardano = self.cardano!
         cardano.network.getSlotNumber { res in
@@ -107,19 +108,22 @@ public struct CardanoSendApi: CardanoApi {
                     switch res {
                     case .success(let utxos):
                         do {
+                                                        
                             let config = TransactionBuilderConfig(fee_algo: cardano.info.linearFee,
                                                                   pool_deposit: cardano.info.poolDeposit,
                                                                   key_deposit: cardano.info.keyDeposit,
                                                                   max_value_size: cardano.info.maxValueSize,
                                                                   max_tx_size: cardano.info.maxTxSize,
                                                                   coins_per_utxo_word: cardano.info.coinsPerUtxoWord,
+                                                                  ex_unit_prices: COption_ExUnitPrices(),
                                                                   prefer_pure_change: false)
+                            
                             var transactionBuilder = try TransactionBuilder(config: config)
                             try transactionBuilder.addOutput(
                                 output: TransactionOutput(address: to, amount: Value(coin: amount))
                             )
                             if let slot = slot {
-                                transactionBuilder.ttl = UInt32(slot) + maxSlots
+                                transactionBuilder.ttl = UInt64(slot) + maxSlots
                             }
                             try transactionBuilder.addInputsFrom(inputs: utxos, strategy: .largestFirst)
                             let _ = try transactionBuilder.addChangeIfNeeded(address: change)
@@ -160,7 +164,7 @@ public struct CardanoSendApi: CardanoApi {
                       lovelace amount: UInt64,
                       from: [Address],
                       change: Address,
-                      maxSlots: UInt32 = 300,
+                      maxSlots: UInt64 = 300,
                       _ cb: @escaping ApiCallback<TransactionHash>) {
         let cardano = self.cardano!
         tokenTransaction(assetID: assetID,
@@ -197,7 +201,7 @@ public struct CardanoSendApi: CardanoApi {
                                  lovelace amount: UInt64,
                                  from: [Address],
                                  change: Address,
-                                 maxSlots: UInt32 = 300,
+                                 maxSlots: UInt64 = 300,
                                  _ cb: @escaping ApiCallback<(TransactionBuilder, [TransactionUnspentOutput])>) {
         let cardano = self.cardano!
         cardano.network.getSlotNumber { res in
@@ -229,6 +233,7 @@ public struct CardanoSendApi: CardanoApi {
                                                                   max_value_size: cardano.info.maxValueSize,
                                                                   max_tx_size: cardano.info.maxTxSize,
                                                                   coins_per_utxo_word: cardano.info.coinsPerUtxoWord,
+                                                                  ex_unit_prices: COption_ExUnitPrices(),
                                                                   prefer_pure_change: false)
                             var transactionBuilder = try TransactionBuilder(config: config)
                             var value = Value(coin: 0)
@@ -243,7 +248,7 @@ public struct CardanoSendApi: CardanoApi {
                                 output: TransactionOutput(address: to, amount: value)
                             )
                             if let slot = slot {
-                                transactionBuilder.ttl = UInt32(slot) + maxSlots
+                                transactionBuilder.ttl = UInt64(slot) + maxSlots
                             }
                             try transactionBuilder.addInputsFrom(inputs: filteredUtxos,
                                                                  strategy: .largestFirstMultiAsset)

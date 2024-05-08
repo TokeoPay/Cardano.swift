@@ -208,6 +208,18 @@ extension COption_Slot: COption {
         None_Slot
     }
 }
+extension COption_SlotBigNum: COption {
+    typealias Tag = COption_SlotBigNum_Tag
+    typealias Value = SlotBigNum
+    
+    func someTag() -> Tag {
+        Some_SlotBigNum
+    }
+    
+    func noneTag() -> Tag {
+        None_SlotBigNum
+    }
+}
 
 extension COption_Certificates: COption {
     typealias Tag = COption_Certificates_Tag

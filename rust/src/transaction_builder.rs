@@ -1,6 +1,6 @@
 use crate::address::address::Address;
 use crate::address::byron::ByronAddress;
-use crate::address::pointer::{Slot, SlotBigNum};
+use crate::address::pointer::{SlotBigNum};
 use crate::array::*;
 use crate::certificate::Certificates;
 use crate::data::CData;
@@ -21,8 +21,7 @@ use crate::withdrawals::Withdrawals;
 // use cardano_serialization_lib::Ed25519KeyHashes;
 use cardano_serialization_lib::{ Ed25519KeyHashes as REd25519KeyHashes,
   address::{Address as RAddress, ByronAddress as RByronAddress},
-  crypto::{Ed25519KeyHash as REd25519KeyHash, ScriptHash as RScriptHash, 
-    ScriptDataHash as RScriptDataHash},
+  crypto::{Ed25519KeyHash as REd25519KeyHash, ScriptHash as RScriptHash},
   fees::LinearFee as RLinearFee,
   metadata::AuxiliaryData as RAuxiliaryData,
   tx_builder::{
@@ -355,7 +354,7 @@ pub struct TTransactionBuilder {
   // input_types: TMockWitnessSet,
   mint: Option<RMint>,
   mint_scripts: Option<RNativeScripts>,
-  script_data_hash: Option<ScriptDataHash>,
+  script_data_hash: COption<ScriptDataHash>,
   required_signers: Ed25519KeyHashes,
 }
 
@@ -415,7 +414,7 @@ impl TryFrom<TransactionBuilder> for TTransactionBuilder {
             // input_types,
             mint: mint.into(),
             mint_scripts: mint_scripts.into(),
-            script_data_hash: Option::None,
+            script_data_hash: COption::None,
             required_signers: keyHashes,
           }
         },
@@ -494,14 +493,14 @@ impl TryFrom<TransactionBuilder> for RTransactionBuilder {
        Ok(tx_builder)
      });
 
-     r.map_err(|e: std::convert::Infallible| { CError::Error("".into_cstr()) })
+     r.map_err(|_e: std::convert::Infallible| { CError::Error(_e.to_string().into_cstr()) })
   }
 }
 
 impl TryFrom<RTransactionBuilder> for TransactionBuilder {
   type Error = CError;
 
-  fn try_from(transaction_builder: RTransactionBuilder) -> Result<Self> {
+  fn try_from(_transaction_builder: RTransactionBuilder) -> Result<Self> {
     // let transaction_builder: TTransactionBuilder =
     //   unsafe { std::mem::transmute(transaction_builder) };
     // transaction_builder.try_into()

@@ -1,20 +1,17 @@
 use std::{
     cmp::Ordering,
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::{HashSet},
     convert::{TryFrom, TryInto},
     hash::Hash,
     ops::Deref,
-    panic::{self, catch_unwind},
+    panic::{catch_unwind},
 };
 
 use cardano_serialization_lib::{
-    address::Address as RAddress,
-    crypto::{ScriptHash, TransactionHash as RTransactionHash},
     utils::{
-        BigNum as RBigNum, Coin, TransactionUnspentOutput as RTransactionUnspentOutput,
-        TransactionUnspentOutputs as RTransactionUnspentOutputs, Value as RValue,
+        TransactionUnspentOutput as RTransactionUnspentOutput,
+        TransactionUnspentOutputs as RTransactionUnspentOutputs,
     },
-    AssetName, TransactionInput as RTransactionInput, TransactionOutput as RTransactionOutput,
 };
 use cml_chain::assets::Value as XCML_Value;
 use cml_chain::{
@@ -29,15 +26,12 @@ use cml_crypto::ScriptHash as CML_ScriptHash;
 use cml_crypto::TransactionHash as CML_TxHash;
 
 use crate::{
-    address::address::Address,
     array::CArray,
     data::CData,
     error::CError,
-    option::COption,
     panic::*,
     ptr::{Free, Ptr},
     string::{CharPtr, IntoCString},
-    transaction_hash::TransactionHash,
     transaction_input::TransactionInput,
     transaction_output::TransactionOutput,
     value::Value,
@@ -254,10 +248,19 @@ fn have_enough(
     have.ge(want)
 }
 
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct CoinSelectionResult {
+    selected: SwiftUTXOs,
+    other: SwiftUTXOs
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn cardano_transaction_unspent_outputs_coin_selection(
     transaction_unspent_outputs: CArray<SwiftUTXO>,
     value: Value,
-    result: &mut (SwiftUTXOs, SwiftUTXOs),
+    result: &mut CoinSelectionResult,
     error: &mut CError,
 ) -> bool {
     let coins_per_byte = 4310 as u64; //FIXME: Make this a parameter!
@@ -374,11 +377,24 @@ pub unsafe extern "C" fn cardano_transaction_unspent_outputs_coin_selection(
                 let rem = TryInto::<SwiftUTXOs>::try_into(result_remaining_utxos)
                     .map_err(|_| CError::Error("".into_cstr()));
 
-                return res.zip(rem);
+                res.zip(rem).and_then(|(selected, other)| {
+                    Ok(CoinSelectionResult {
+                        selected,
+                        other
+                    })
+                })
             })
     })
     .response(result, error)
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn cardano_swift_utxo_free(
+  swift_utxo: &mut SwiftUTXO,
+) {
+    swift_utxo.free();
+}
+
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_transaction_unspent_outputs_free(

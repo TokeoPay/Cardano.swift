@@ -26,7 +26,7 @@ impl Free for PolicyID {
 impl TryFrom<COption<MultiAsset>> for AssetBundle<u64> {
   type Error = CError;
   
-  fn try_from(value: COption<MultiAsset>) -> std::prelude::v1::Result<Self, Self::Error> {
+  fn try_from(_value: COption<MultiAsset>) -> std::prelude::v1::Result<Self, Self::Error> {
         todo!()
     }
 }
@@ -48,7 +48,7 @@ impl TryFrom<MultiAsset> for AssetBundle<u64> {
                         .map(|(asset_name, value)| {
                             
                             let bbb: Result<(CML_AssetName, u64)> = CML_AssetName::new(asset_name.bytes())
-                                .map_err(|e| CError::Error("".into_cstr()))
+                                .map_err(|_e| CError::Error("".into_cstr()))
                                 .and_then(|cml_asset_name| Ok((cml_asset_name, value.clone())));
                             return bbb;
                             

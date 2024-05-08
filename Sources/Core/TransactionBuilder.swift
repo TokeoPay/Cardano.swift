@@ -264,12 +264,11 @@ public struct TransactionBuilder {
     public let inputs: Array<TxBuilderInput>
     public let outputs: TransactionOutputs
     public var fee: Coin?
-    public var ttl: Slot?
+    public var ttl: SlotBigNum?
     public let certs: Certificates?
     public let withdrawals: Withdrawals?
     public var auxiliaryData: AuxiliaryData?
-    public var validityStartInterval: Slot?
-    public let inputTypes: MockWitnessSet
+    public var validityStartInterval: SlotBigNum?
     public let mint: Mint?
     public let mintScripts: NativeScripts?
     
@@ -287,7 +286,7 @@ public struct TransactionBuilder {
         }
         auxiliaryData = transactionBuilder.auxiliary_data.get()?.copied()
         validityStartInterval = transactionBuilder.validity_start_interval.get()
-        inputTypes = transactionBuilder.input_types.copied()
+        
         mint = transactionBuilder.mint.get()?.copiedDictionary().mapValues {
             $0.copiedDictionary().mapValues { $0.bigInt }
         }
@@ -315,6 +314,11 @@ public struct TransactionBuilder {
             max_value_size: maxValueSize,
             max_tx_size: maxTxSize,
             coins_per_utxo_word: coinsPerUtxoWord,
+            ex_unit_prices: Optional(
+                ExUnitPrices(
+                    mem_price: SubCoin(numerator: 62000000 as UInt64 , denominator: 1 as UInt64),
+                    step_price: SubCoin(numerator: 20000000000 as UInt64, denominator: 1 as UInt64)
+                )).cOption(),
             prefer_pure_change: preferPureChange
         ))
     }
@@ -424,7 +428,6 @@ public struct TransactionBuilder {
                         try auxiliaryData.withCOption(
                             with: { try $0.withCAuxiliaryData(fn: $1) }
                         ) { auxiliaryData in
-                            try inputTypes.withCMockWitnessSet { inputTypes in
                                 try mint.withCOption(
                                     with: { try $0.withCKVArray(fn: $1) }
                                 ) { mint in
@@ -434,6 +437,7 @@ public struct TransactionBuilder {
                                         try fn(CCardano.TransactionBuilder(
                                             config: config,
                                             inputs: inputs,
+                                            collateral: inputs, //TODO: THis is not right, but we shouldn't be using this yet
                                             outputs: outputs,
                                             fee: fee.cOption(),
                                             ttl: ttl.cOption(),
@@ -441,13 +445,14 @@ public struct TransactionBuilder {
                                             withdrawals: withdrawals,
                                             auxiliary_data: auxiliaryData,
                                             validity_start_interval: validityStartInterval.cOption(),
-                                            input_types: inputTypes,
                                             mint: mint,
-                                            mint_scripts: mintScripts
+                                            mint_scripts: mintScripts,
+                                            script_data_hash: COption_ScriptDataHash(),
+                                            required_signers: CArray_Ed25519KeyHash()
                                         ))
                                     }
                                 }
-                            }
+                            
                         }
                     }
                 }

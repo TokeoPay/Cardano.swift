@@ -129,7 +129,7 @@ impl TryFrom<RNativeScript> for NativeScript {
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_native_script_hash(
-  native_script: NativeScript, namespace: ScriptHashNamespace, result: &mut ScriptHash,
+  native_script: NativeScript, _namespace: ScriptHashNamespace, result: &mut ScriptHash,
   error: &mut CError,
 ) -> bool {
   handle_exception_result(|| {

@@ -36,23 +36,6 @@ public typealias ProtocolVersion = CCardano.ProtocolVersion
 
 extension CCardano.ProtocolVersion: CType {}
 
-public typealias ProtocolVersions = Array<ProtocolVersion>
-
-extension CCardano.ProtocolVersions: CArray {
-    typealias CElement = ProtocolVersion
-    typealias Val = [ProtocolVersion]
-
-    mutating func free() {
-        cardano_protocol_versions_free(&self)
-    }
-}
-
-extension ProtocolVersions {
-    func withCArray<T>(fn: @escaping (CCardano.ProtocolVersions) throws -> T) rethrows -> T {
-        try withCArr(fn: fn)
-    }
-}
-
 public enum Language {
     case plutusV1
 
@@ -184,18 +167,19 @@ extension COption_Nonce: COption {
     }
 }
 
-extension COption_ProtocolVersions: COption {
-    typealias Tag = COption_ProtocolVersions_Tag
-    typealias Value = CCardano.ProtocolVersions
-
-    func someTag() -> Tag {
-        Some_ProtocolVersions
-    }
-
-    func noneTag() -> Tag {
-        None_ProtocolVersions
-    }
+extension COption_ProtocolVersion: COption {
+        typealias Tag = COption_ProtocolVersion_Tag
+        typealias Value = CCardano.ProtocolVersion
+    
+        func someTag() -> Tag {
+            Some_ProtocolVersion
+        }
+    
+        func noneTag() -> Tag {
+            None_ProtocolVersion
+        }
 }
+
 
 extension COption_Costmdls: COption {
     typealias Tag = COption_Costmdls_Tag
@@ -251,7 +235,7 @@ public struct ProtocolParamUpdate {
     public var treasuryGrowthRate: UnitInterval?
     public var d: UnitInterval?
     public var extraEntropy: Nonce?
-    public var protocolVersion: ProtocolVersions?
+    public var protocolVersion: ProtocolVersion?
     public var minPoolCost: Coin?
     public var adaPerUtxoByte: Coin?
     public var costModels: Costmdls?
@@ -275,7 +259,7 @@ public struct ProtocolParamUpdate {
         treasuryGrowthRate = protocolParamUpdate.treasury_growth_rate.get()
         d = protocolParamUpdate.d.get()
         extraEntropy = protocolParamUpdate.extra_entropy.get()
-        protocolVersion = protocolParamUpdate.protocol_version.get()?.copied()
+        protocolVersion = protocolParamUpdate.protocol_version.get()
         minPoolCost = protocolParamUpdate.min_pool_cost.get()
         adaPerUtxoByte = protocolParamUpdate.ada_per_utxo_byte.get()
         let costModels = protocolParamUpdate.cost_models.get()?.copiedDictionary().map { key, value in
@@ -305,9 +289,7 @@ public struct ProtocolParamUpdate {
     func withCProtocolParamUpdate<T>(
         fn: @escaping (CCardano.ProtocolParamUpdate) throws -> T
     ) rethrows -> T {
-        try protocolVersion.withCOption(
-            with: { try $0.withCArray(fn: $1) }
-        ) { protocolVersion in
+        
             try costModels.withCOption(with: {
                 try $0.withCKVArray(fn: $1)
             }) { costModels in
@@ -326,7 +308,7 @@ public struct ProtocolParamUpdate {
                     treasury_growth_rate: treasuryGrowthRate.cOption(),
                     d: d.cOption(),
                     extra_entropy: extraEntropy.cOption(),
-                    protocol_version: protocolVersion,
+                    protocol_version: protocolVersion.cOption(),
                     min_pool_cost: minPoolCost.cOption(),
                     ada_per_utxo_byte: adaPerUtxoByte.cOption(),
                     cost_models: costModels,
@@ -336,7 +318,7 @@ public struct ProtocolParamUpdate {
                     max_value_size: maxValueSize.cOption()
                 ))
             }
-        }
+        
     }
 }
 
