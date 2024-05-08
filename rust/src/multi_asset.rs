@@ -39,7 +39,7 @@ impl TryFrom<MultiAsset> for AssetBundle<u64> {
 
         let mut multi_assets = Self::new();
 
-        map.into_iter().map(|(script_hash, assets)| {
+        let _ = map.into_iter().map(|(script_hash, assets)| {
             TryInto::<cml_crypto::ScriptHash>::try_into(script_hash).map(|policy_id| {
                 let assets_map = unsafe { assets.as_btree_map() }.into_result();
 

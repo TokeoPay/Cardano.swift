@@ -4,11 +4,9 @@ use crate::transaction_input::TransactionIndex;
 use std::convert::{TryInto, TryFrom};
 use crate::stake_credential::StakeCredential;
 
-use cardano_serialization_lib::address::{
-  Pointer as RPointer,
-  StakeCredential as RStakeCredential,
-  PointerAddress as RPointerAddress
-};
+use cardano_serialization_lib::{address::{
+  Pointer as RPointer, PointerAddress as RPointerAddress, StakeCredential as RStakeCredential
+}, utils::to_bignum};
 
 pub type Slot = u32;
 pub type SlotBigNum = u64;
@@ -33,7 +31,10 @@ impl From<RPointer> for Pointer {
 
 impl From<Pointer> for RPointer {
   fn from(ptr: Pointer) -> Self {
-    Self::new(ptr.slot, ptr.tx_index, ptr.cert_index)
+    Self::new_pointer(  
+      &to_bignum(ptr.slot as u64),
+      &to_bignum(ptr.tx_index as u64), 
+      &to_bignum(ptr.cert_index as u64))
   }
 }
 

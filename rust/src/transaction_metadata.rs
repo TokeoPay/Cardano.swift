@@ -1,4 +1,4 @@
-use crate::address::pointer::Slot;
+use crate::address::pointer::SlotBigNum;
 use crate::array::*;
 use crate::data::CData;
 use crate::error::CError;
@@ -8,6 +8,7 @@ use crate::panic::*;
 use crate::ptr::*;
 use crate::stake_credential::Ed25519KeyHash;
 use crate::stake_credential::ScriptHash;
+use cardano_serialization_lib::utils::to_bignum;
 use cardano_serialization_lib::{
   metadata::AuxiliaryData as RAuxiliaryData,
   plutus::{PlutusScript as RPlutusScript, PlutusScripts as RPlutusScripts},
@@ -354,19 +355,19 @@ pub unsafe extern "C" fn cardano_script_n_of_k_free(script_n_of_k: &mut ScriptNO
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct TimelockStart {
-  slot: Slot,
+  slot: SlotBigNum,
 }
 
 impl From<TimelockStart> for RTimelockStart {
   fn from(timelock_start: TimelockStart) -> Self {
-    Self::new(timelock_start.slot)
+    Self::new_timelockstart(& to_bignum(timelock_start.slot))
   }
 }
 
 impl From<RTimelockStart> for TimelockStart {
   fn from(timelock_start: RTimelockStart) -> Self {
     Self {
-      slot: timelock_start.slot().unwrap(),
+      slot: timelock_start.slot_bignum().into(),
     }
   }
 }
@@ -374,19 +375,19 @@ impl From<RTimelockStart> for TimelockStart {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct TimelockExpiry {
-  slot: Slot,
+  slot: SlotBigNum,
 }
 
 impl From<TimelockExpiry> for RTimelockExpiry {
   fn from(timelock_expiry: TimelockExpiry) -> Self {
-    Self::new(timelock_expiry.slot)
+    Self::new_timelockexpiry(&to_bignum(timelock_expiry.slot))
   }
 }
 
 impl From<RTimelockExpiry> for TimelockExpiry {
   fn from(timelock_expiry: RTimelockExpiry) -> Self {
     Self {
-      slot: timelock_expiry.slot().unwrap(),
+      slot: timelock_expiry.slot_bignum().into(),
     }
   }
 }

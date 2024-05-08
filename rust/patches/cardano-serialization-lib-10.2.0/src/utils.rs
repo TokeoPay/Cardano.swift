@@ -246,6 +246,12 @@ impl TryFrom<BigNum> for u32 {
     }
 }
 
+impl From<BigNum> for u64 {
+    fn from(value: BigNum) -> Self {
+        return value.0
+    }
+}
+
 impl From<u64> for BigNum {
     fn from(value: u64) -> Self {
         return BigNum(value)

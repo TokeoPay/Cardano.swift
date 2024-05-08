@@ -7,7 +7,6 @@ use super::ptr::*;
 use cardano_serialization_lib::AssetName as RAssetName;
 use cml_chain::assets::AssetName as CML_AssetName;
 use std::convert::{TryFrom, TryInto};
-use std::io::Read;
 
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]

@@ -1,3 +1,4 @@
+use crate::address::pointer::SlotBigNum;
 use crate::array::*;
 use crate::asset_name::AssetName;
 use crate::certificate::Certificates;
@@ -14,7 +15,7 @@ use crate::ptr::*;
 use crate::transaction_input::TransactionInputs;
 use crate::transaction_output::TransactionOutputs;
 use crate::withdrawals::Withdrawals;
-use crate::{address::pointer::Slot, stake_credential::Ed25519KeyHashes};
+use crate::stake_credential::Ed25519KeyHashes;
 use cardano_serialization_lib::{
   crypto::{AuxiliaryDataHash as RAuxiliaryDataHash, ScriptDataHash as RScriptDataHash},
   utils::{from_bignum, to_bignum},
@@ -322,12 +323,12 @@ pub struct TransactionBody {
   inputs: TransactionInputs,
   outputs: TransactionOutputs,
   fee: Coin,
-  ttl: COption<Slot>,
+  ttl: COption<SlotBigNum>,
   certs: COption<Certificates>,
   withdrawals: COption<Withdrawals>,
   update: COption<Update>,
   auxiliary_data_hash: COption<AuxiliaryDataHash>,
-  validity_start_interval: COption<Slot>,
+  validity_start_interval: COption<SlotBigNum>,
   mint: COption<Mint>,
   script_data_hash: COption<ScriptDataHash>,
   collateral: COption<TransactionInputs>,
@@ -355,7 +356,7 @@ impl TryFrom<TransactionBody> for RTransactionBody {
     tb.inputs
       .try_into()
       .zip(tb.outputs.try_into())
-      .map(|(inputs, outputs)| Self::new(&inputs, &outputs, &to_bignum(tb.fee), tb.ttl.into()))
+      .map(|(inputs, outputs)| Self::new_tx_body(&inputs, &outputs, &to_bignum(tb.fee)))
       .zip({
         let certs: Option<Certificates> = tb.certs.into();
         certs.map(|certs| certs.try_into()).transpose()
@@ -387,14 +388,14 @@ impl TryFrom<TransactionBody> for RTransactionBody {
       .map(
         |((((((mut new_tb, certs), wls), update), mint), collateral), required_signers)| {
           let adh: Option<AuxiliaryDataHash> = tb.auxiliary_data_hash.into();
-          let vsi: Option<Slot> = tb.validity_start_interval.into();
+          let vsi: Option<SlotBigNum> = tb.validity_start_interval.into();
           let sdh: Option<ScriptDataHash> = tb.script_data_hash.into();
           let network_id: Option<NetworkId> = tb.network_id.into();
           certs.map(|certs| new_tb.set_certs(&certs));
           wls.map(|wls| new_tb.set_withdrawals(&wls));
           update.map(|update| new_tb.set_update(&update));
           adh.map(|adh| new_tb.set_auxiliary_data_hash(&adh.into()));
-          vsi.map(|vsi| new_tb.set_validity_start_interval(vsi));
+          vsi.map(|vsi| new_tb.set_validity_start_interval_bignum(to_bignum(vsi as u64)));
           mint.map(|mint| new_tb.set_mint(&mint));
           sdh.map(|sdh| new_tb.set_script_data_hash(&sdh.into()));
           collateral.map(|collateral| new_tb.set_collateral(&collateral));
@@ -429,16 +430,17 @@ impl TryFrom<RTransactionBody> for TransactionBody {
       )
       .map(
         |(((((((inputs, outputs), certs), withdrawals), update), mint), collateral), r_signers)| {
+          
           Self {
             inputs,
             outputs,
             fee: from_bignum(&tb.fee()),
-            ttl: tb.ttl().map(|bn| { bn.into() }).unwrap_or(COption::None),
+            ttl: tb.ttl_bignum().map(|bn| { COption::Some(Into::<u64>::into(bn)) }).unwrap_or(COption::None),
             certs: certs.into(),
             withdrawals: withdrawals.into(),
             update: update.into(),
             auxiliary_data_hash: tb.auxiliary_data_hash().map(|hash| hash.into()).into(),
-            validity_start_interval: tb.validity_start_interval().map(|vsi| vsi.into()).unwrap_or(COption::None),
+            validity_start_interval: tb.validity_start_interval_bignum().map(|bn| { COption::Some(Into::<u64>::into(bn)) }).unwrap_or(COption::None),
             mint: mint.into(),
             script_data_hash: tb.script_data_hash().map(|hash| hash.into()).into(),
             collateral: collateral.into(),

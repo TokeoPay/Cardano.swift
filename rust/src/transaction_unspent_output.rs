@@ -1,18 +1,16 @@
 use std::{
     cmp::Ordering,
-    collections::{HashSet},
+    collections::HashSet,
     convert::{TryFrom, TryInto},
     hash::Hash,
     ops::Deref,
-    panic::{catch_unwind},
+    panic::catch_unwind,
 };
 
-use cardano_serialization_lib::{
-    utils::{
+use cardano_serialization_lib::utils::{
         TransactionUnspentOutput as RTransactionUnspentOutput,
-        TransactionUnspentOutputs as RTransactionUnspentOutputs,
-    },
-};
+        TransactionUnspentOutputs as RTransactionUnspentOutputs
+    };
 use cml_chain::assets::Value as XCML_Value;
 use cml_chain::{
     assets::AssetName as CML_AssetName,
@@ -37,7 +35,7 @@ use crate::{
     value::Value,
 };
 
-type CML_Value = XCML_Value;
+type CMLValue = XCML_Value;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -267,7 +265,7 @@ pub unsafe extern "C" fn cardano_transaction_unspent_outputs_coin_selection(
 
     handle_exception_result(|| {
         TryInto::<Vec<CMLTransactionUnspentOutput>>::try_into(transaction_unspent_outputs)
-            .zip(TryInto::<CML_Value>::try_into(value))
+            .zip(TryInto::<CMLValue>::try_into(value))
             .and_then(|(utxos, target)| {
                 let mut selected_utxos: HashSet<CMLTransactionUnspentOutput> = HashSet::new(); //: Vec<RTransactionUnspentOutput> = Vec::with_capacity(utxos.len());
                 let mut ordered_utxos: Vec<CMLTransactionUnspentOutput> = utxos.clone();
