@@ -196,18 +196,6 @@ public enum NetworkId {
     }
 }
 
-extension COption_Slot: COption {
-    typealias Tag = COption_Slot_Tag
-    typealias Value = Slot
-
-    func someTag() -> Tag {
-        Some_Slot
-    }
-
-    func noneTag() -> Tag {
-        None_Slot
-    }
-}
 extension COption_SlotBigNum: COption {
     typealias Tag = COption_SlotBigNum_Tag
     typealias Value = SlotBigNum
@@ -342,12 +330,12 @@ public struct TransactionBody {
     public private(set) var inputs: TransactionInputs
     public private(set) var outputs: TransactionOutputs
     public private(set) var fee: Coin
-    public private(set) var ttl: Slot?
+    public private(set) var ttl: SlotBigNum?
     public var certs: Certificates?
     public var withdrawals: Withdrawals?
     public var update: Update?
     public var auxiliaryDataHash: AuxiliaryDataHash?
-    public var validityStartInterval: Slot?
+    public var validityStartInterval: SlotBigNum?
     public var mint: Mint?
     public var scriptDataHash: ScriptDataHash?
     public var collateral: TransactionInputs?
@@ -380,7 +368,7 @@ public struct TransactionBody {
     }
     
     public init(
-        inputs: TransactionInputs, outputs: TransactionOutputs, fee: Coin, ttl: Slot?
+        inputs: TransactionInputs, outputs: TransactionOutputs, fee: Coin, ttl: SlotBigNum?
     ) {
         self.inputs = inputs
         self.outputs = outputs
