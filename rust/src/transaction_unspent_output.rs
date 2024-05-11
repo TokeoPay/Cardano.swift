@@ -8,9 +8,9 @@ use std::{
 };
 
 use cardano_serialization_lib::utils::{
-        TransactionUnspentOutput as RTransactionUnspentOutput,
-        TransactionUnspentOutputs as RTransactionUnspentOutputs
-    };
+    TransactionUnspentOutput as RTransactionUnspentOutput,
+    TransactionUnspentOutputs as RTransactionUnspentOutputs,
+};
 use cml_chain::assets::Value as XCML_Value;
 use cml_chain::{
     assets::AssetName as CML_AssetName,
@@ -116,7 +116,6 @@ impl TryFrom<RTransactionUnspentOutputs> for TransactionUnspentOutputs {
             .map(|transaction_unspent_outputs| transaction_unspent_outputs.into())
     }
 }
-
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -246,12 +245,11 @@ fn have_enough(
     have.ge(want)
 }
 
-
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct CoinSelectionResult {
     selected: SwiftUTXOs,
-    other: SwiftUTXOs
+    other: SwiftUTXOs,
 }
 
 #[no_mangle]
@@ -375,24 +373,19 @@ pub unsafe extern "C" fn cardano_transaction_unspent_outputs_coin_selection(
                 let rem = TryInto::<SwiftUTXOs>::try_into(result_remaining_utxos)
                     .map_err(|_| CError::Error("".into_cstr()));
 
-                res.zip(rem).and_then(|(selected, other)| {
-                    Ok(CoinSelectionResult {
-                        selected,
-                        other
-                    })
-                })
+                return Ok(CoinSelectionResult {
+                    selected: res?,
+                    other: rem?,
+                });
             })
     })
     .response(result, error)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn cardano_swift_utxo_free(
-  swift_utxo: &mut SwiftUTXO,
-) {
+pub unsafe extern "C" fn cardano_swift_utxo_free(swift_utxo: &mut SwiftUTXO) {
     swift_utxo.free();
 }
-
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_transaction_unspent_outputs_free(

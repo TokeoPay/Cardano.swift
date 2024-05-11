@@ -50,6 +50,8 @@ mod ptr;
 mod panic;
 mod array;
 
+pub mod cml;
+
 #[no_mangle]
 pub unsafe extern "C" fn cardano_initialize() {
     panic::hide_exceptions();

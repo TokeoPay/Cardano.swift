@@ -33,7 +33,8 @@ final class FeesTests: XCTestCase {
                 amount: Value(coin: 1)
             )
         ]
-        let body = TransactionBody(inputs: inputs, outputs: outputs, fee: 94002, ttl: 10)
+        
+        let body = TransactionBody(inputs: inputs, outputs: outputs, fee: 94002, ttl: nil)
         var w = TransactionWitnessSet()
         let vkw = [
             try Vkeywitness(
@@ -74,7 +75,7 @@ final class FeesTests: XCTestCase {
                 amount: Value(coin: 1)
             )
         ]
-        let body = TransactionBody(inputs: inputs, outputs: outputs, fee: 112002, ttl: 10)
+        let body = TransactionBody(inputs: inputs, outputs: outputs, fee: 112002, ttl: nil)
         var w = TransactionWitnessSet()
         let bootstrapWits = [
             try BootstrapWitness(

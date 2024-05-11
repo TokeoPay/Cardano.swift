@@ -22,6 +22,10 @@ cardano-multiplatform-lib = { version = "5.3.1" }
 cml-core = "5.3.1"
 cml-chain = "5.3.1"
 cml-crypto = "5.3.1"
+blockfrost = "1.0.1"
+bech32 = "0.7.2"
+blake2 = "0.10.6"
+
 # cbindgen = { version = "0.26.0", optional = true }
 
 # [patch.crates-io]
