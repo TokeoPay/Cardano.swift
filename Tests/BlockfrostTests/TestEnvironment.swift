@@ -19,6 +19,11 @@ struct TestEnvironment {
         let mnemonic = env["CARDANO_TEST_MNEMONIC"]!
         let blockfrostProjectId = env["CARDANO_TEST_BLOCKFROST_PROJECT_ID"]!
         let publicKey = env["CARDANO_TEST_PUBLIC_KEY"]!
+        
+        print("mnemonic", mnemonic)
+        print("blockfrostProjectId", blockfrostProjectId)
+        print("publicKey", publicKey)
+        
         return Self(
             mnemonic: mnemonic.components(separatedBy: " "),
             blockfrostProjectId: blockfrostProjectId,
