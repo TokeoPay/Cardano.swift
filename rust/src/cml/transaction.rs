@@ -1,20 +1,30 @@
+use crate::error::CError;
+use crate::panic::{handle_exception_result, CResponse};
+#[allow(unused_imports)]
 use crate::ptr::Ptr;
 use crate::{array::CArray, data::CData, option::COption, ptr::Free, string::IntoCString};
+use cml_chain::builders::witness_builder::TransactionWitnessSetBuilder;
+use cml_chain::crypto::utils::make_vkey_witness;
 use cml_chain::NonemptySetTransactionInput;
+use cml_core::serialization::Serialize;
+
+#[allow(unused_imports)]
 use cml_core::serialization::FromBytes;
 use cml_crypto::chain_crypto::bech32::{to_bech32_from_bytes, Bech32};
-use cml_crypto::{blake2b224, blake2b256, RawBytesEncoding};
+use cml_crypto::{PrivateKey, RawBytesEncoding};
 
+#[allow(unused_imports)]
 use blake2::{Blake2b, Digest};
 
 use cml_chain::assets::{MultiAsset, Value as CML_Value};
-use hex::ToHex;
+// use hex::ToHex;
 
 use super::super::string::CharPtr;
 use ::cml_chain::transaction::{Transaction, TransactionInput, TransactionOutput};
 
 /* End of Imports */
-
+#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Asset {
     fingerprint: CharPtr,
     policy: CData,
@@ -33,6 +43,8 @@ impl Free for Asset {
     }
 }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Value {
     #[allow(dead_code)]
     lovelace: u64,
@@ -45,6 +57,8 @@ impl Free for Value {
     }
 }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct TxOutput {
     address: CharPtr,
     value: Value,
@@ -57,6 +71,8 @@ impl Free for TxOutput {
     }
 }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct UTxO {
     tx_hash: CData,
     #[allow(dead_code)]
@@ -76,6 +92,8 @@ pub type TxOutputs = CArray<TxOutput>;
 #[allow(dead_code)]
 pub type Signers = CArray<CData>;
 
+#[repr(C)]
+#[derive(Copy, Clone)]
 pub struct TxDetails {
     #[allow(dead_code)]
     fee: u64,
@@ -259,35 +277,107 @@ impl<'a> Bech32 for AssetName<'a> {
     }
 }
 
-//#[no_mangle]
-//pub unsafe extern "C" fn cml_tx_details_from_bytes(
-//    bytes: CData,
-//    result: &mut TxDetails,
-//    error: &mut CError,
-//) {
-//    handle_exception_result(|| {
-//        bytes
-//            .unowned()
-//            .and_then(|bytes| Transaction::from_cbor_bytes(bytes).into())
-//            .and_then(|txn: Result<TxDetails, CError>| txn)
-//    })
-//    .response(result, error)
-//}
+#[no_mangle]
+pub unsafe extern "C" fn cml_tx_details(
+    transaction: CData,
+    result: &mut TxDetails,
+    error: &mut CError,
+) -> bool {
+    handle_exception_result(|| {
+        let x = transaction
+            .unowned()
+            .and_then(|tx_bytes| {
+                Transaction::from_bytes(tx_bytes.to_vec())
+                    .map_err(|_| CError::Error("Tx Build Error".into_cstr()))
+            })
+            .and_then(|txn| Ok(Into::<TxDetails>::into(txn)));
+
+        x
+    })
+    .response(result, error)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn cml_tx_sign(
+    transaction: CData,
+    private_key: CData,
+    result: &mut CData,
+    error: &mut CError,
+) -> bool {
+    handle_exception_result(|| {
+        let tx_bytes = transaction.unowned()?;
+        let pk_bytes = private_key.unowned()?;
+        let pk = PrivateKey::from_raw_bytes(pk_bytes)
+            .map_err(|_| CError::Error("Tx Build Error - Bad Private Key".into_cstr()))?;
+        let tx = Transaction::from_bytes(tx_bytes.to_vec())
+            .map_err(|_| CError::Error("Tx Build Error".into_cstr()))?;
+
+        let vkey_witness = make_vkey_witness(&tx.body.hash(), &pk);
+        let mut tx_witness_set = TransactionWitnessSetBuilder::new();
+
+        tx_witness_set.add_vkey(vkey_witness);
+
+        let res = Serialize::to_cbor_bytes(&tx_witness_set.build());
+
+        Ok(res.into())
+    })
+    .response(result, error)
+}
 
 #[cfg(test)]
 mod transaction_tests {
     use super::*;
-    #[test]
-    fn asset_name_to_fingerprint() {
+
+    fn test_asset_fp(asset_name: &str, policy_id: &str, expected: &str) {
         let asset_name = AssetName {
-            asset_name: &hex::decode("54696765727a33383732").unwrap(),
-            policy_id: &hex::decode("ba92e5f4665a026f7d5f2f223d398d2d8b649e147b5163b759bd61a0")
-                .unwrap(),
+            asset_name: &hex::decode(asset_name).unwrap(),
+            policy_id: &hex::decode(policy_id).unwrap(),
         };
 
-        assert_eq!(
-            asset_name.to_bech32_str(),
-            "asset1vnklfey0gtwa7hwqknjn6j9ulaqjrj7z2q7jty".trim()
+        assert_eq!(asset_name.to_bech32_str(), expected.trim());
+    }
+
+    #[test]
+    fn asset_name_to_fingerprint() {
+        test_asset_fp(
+            "",
+            "7eae28af2208be856f7a119668ae52a49b73725e326dc16579dcc373",
+            "asset1rjklcrnsdzqp65wjgrg55sy9723kw09mlgvlc3",
+        );
+        test_asset_fp(
+            "",
+            "7eae28af2208be856f7a119668ae52a49b73725e326dc16579dcc37e",
+            "asset1nl0puwxmhas8fawxp8nx4e2q3wekg969n2auw3",
+        );
+        test_asset_fp(
+            "",
+            "1e349c9bdea19fd6c147626a5260bc44b71635f398b67c59881df209",
+            "asset1uyuxku60yqe57nusqzjx38aan3f2wq6s93f6ea",
+        );
+        test_asset_fp(
+            "504154415445",
+            "7eae28af2208be856f7a119668ae52a49b73725e326dc16579dcc373",
+            "asset13n25uv0yaf5kus35fm2k86cqy60z58d9xmde92",
+        );
+        test_asset_fp(
+            "504154415445",
+            "1e349c9bdea19fd6c147626a5260bc44b71635f398b67c59881df209",
+            "asset1hv4p5tv2a837mzqrst04d0dcptdjmluqvdx9k3",
+        );
+        test_asset_fp(
+            "7eae28af2208be856f7a119668ae52a49b73725e326dc16579dcc373",
+            "1e349c9bdea19fd6c147626a5260bc44b71635f398b67c59881df209",
+            "asset1aqrdypg669jgazruv5ah07nuyqe0wxjhe2el6f",
+        );
+        test_asset_fp(
+            "1e349c9bdea19fd6c147626a5260bc44b71635f398b67c59881df209",
+            "7eae28af2208be856f7a119668ae52a49b73725e326dc16579dcc373",
+            "asset17jd78wukhtrnmjh3fngzasxm8rck0l2r4hhyyt",
+        );
+        test_asset_fp(
+            "0000000000000000000000000000000000000000000000000000000000000000",
+            "7eae28af2208be856f7a119668ae52a49b73725e326dc16579dcc373",
+            "asset1pkpwyknlvul7az0xx8czhl60pyel45rpje4z8w",
         );
     }
 
