@@ -7,23 +7,17 @@
 
 import Foundation
 import Cardano
-import Bip39
 
 struct TestEnvironment {
     let mnemonic: [String]
     let blockfrostProjectId: String
     let publicKey: Bip32PublicKey
     
-    static var instance: Self {       
+    static var instance: Self {
         let env = ProcessInfo.processInfo.environment
-        let mnemonic = "test walk nut penalty hip pave soap entry language right filter choice"
-        let blockfrostProjectId = "preprodid3CXNLl2A2J5bYqQPQwM0cQQ8BZVArb"
-        let publicKey = "xpub1ulhlm5wqg24wrdvxphvjtys8lcq83hyz8x2egsgp9eqyjy5xqgvn583m6hw0z875lxy7ctxum6362ndcn9ees96wehxgwqrvyaqhdgqv0khjm"
-        
-        print(mnemonic)
-        print(blockfrostProjectId)
-        print(publicKey)
-        
+        let mnemonic = env["CARDANO_TEST_MNEMONIC"]!
+        let blockfrostProjectId = env["CARDANO_TEST_BLOCKFROST_PROJECT_ID"]!
+        let publicKey = env["CARDANO_TEST_PUBLIC_KEY"]!
         return Self(
             mnemonic: mnemonic.components(separatedBy: " "),
             blockfrostProjectId: blockfrostProjectId,
