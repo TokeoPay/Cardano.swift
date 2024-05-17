@@ -22,12 +22,12 @@ export IPHONEOS_DEPLOYMENT_TARGET=11
 
 readonly SDK_MAPPINGS=(
 	'ios-:iphoneos'
-	#	'ios-simulator:iphonesimulator'
-	#	'tvos-:appletvos'
-	#	'tvos-simulator:appletvsimulator'
-	#	'watchos-:watchos'
-	#	'watchos-simulator:watchsimulator'
-	#	'macos-:macosx'
+	'ios-simulator:iphonesimulator'
+	'tvos-:appletvos'
+	'tvos-simulator:appletvsimulator'
+	'watchos-:watchos'
+	'watchos-simulator:watchsimulator'
+	'macos-:macosx'
 )
 
 function get_sdk_name() {

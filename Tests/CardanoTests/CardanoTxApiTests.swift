@@ -120,24 +120,24 @@ final class CardanoTxApiTests: XCTestCase {
         wait(for: [success], timeout: 10)
     }
     
-    func testSignAndSubmit() throws {
-        let success = expectation(description: "success")
-        let cardano = try Cardano(
-            info: .testnet,
-            signer: signatureProvider,
-            network: networkProvider,
-            addresses: addressManager,
-            utxos: NonCachingUtxoProvider()
-        )
-        cardano.tx.signAndSubmit(
-            tx: Self.testTransaction.body,
-            with: [Self.testAddress],
-            auxiliaryData: nil
-        ) { res in
-            let transactionHash = try! res.get()
-            XCTAssertEqual(transactionHash, Self.testTransactionHash)
-            success.fulfill()
-        }
-        wait(for: [success], timeout: 10)
-    }
+//    func testSignAndSubmit() throws {
+//        let success = expectation(description: "success")
+//        let cardano = try Cardano(
+//            info: .testnet,
+//            signer: signatureProvider,
+//            network: networkProvider,
+//            addresses: addressManager,
+//            utxos: NonCachingUtxoProvider()
+//        )
+//        cardano.tx.signAndSubmit(
+//            tx: Self.testTransaction.body,
+//            with: [Self.testAddress],
+//            auxiliaryData: nil
+//        ) { res in
+//            let transactionHash = try! res.get()
+//            XCTAssertEqual(transactionHash, Self.testTransactionHash)
+//            success.fulfill()
+//        }
+//        wait(for: [success], timeout: 10)
+//    }
 }

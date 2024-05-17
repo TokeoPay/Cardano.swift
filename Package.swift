@@ -36,7 +36,8 @@ var package = Package(
             swiftSettings: [.unsafeFlags(["-Onone"])]),
         .testTarget(
             name: "CoreTests",
-            dependencies: ["CardanoCore"]),
+            dependencies: ["CardanoCore"]
+        ),
         .testTarget(
             name: "CardanoTests",
             dependencies: ["Cardano"])
@@ -54,8 +55,8 @@ let ccardano: Target = useLocalBinary ?
         path: "rust/binaries/CCardano.xcframework") :
     .binaryTarget(
         name: "CCardano",
-        url: "https://pub-5314ba2a19a94f41912a726140440b24.r2.dev/CCardano.binaries.9cb77dd92.zip",
-        checksum: "9cb77dd924f4532cabe93cb2d0fa711ddbf8f4256c68342c0fa16e20e85bcc9a")
+        url: "https://pub-5314ba2a19a94f41912a726140440b24.r2.dev/CCardano.binaries.f29bee5a.zip",
+        checksum: "f29bee5a2d84ff24509afce5e09a8c6eda81f07e1beaf06cd918307c42a5f34d")
 package.targets.append(contentsOf: [
     ccardano,
     .target(
