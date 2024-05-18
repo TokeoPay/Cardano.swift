@@ -9,10 +9,10 @@ import Foundation
 import CCardano
 
 public struct Asset: Codable {
-    let fingerprint: String
-    let policy: Data
-    let name: Data
-    let qty: UInt64
+    public let fingerprint: String
+    public let policy: Data
+    public let name: Data
+    public let qty: UInt64
     
     init(asset: CCardano.CmlAsset) {
         fingerprint = asset.fingerprint.copied()
@@ -45,8 +45,8 @@ extension CCardano.CmlAssets: CArray {
 }
 
 public struct CmlValue: Codable {
-    let lovelace: UInt64
-    let assets: [Asset]
+    public let lovelace: UInt64
+    public let assets: [Asset]
     
     init(val: CCardano.CmlValue) {
         lovelace = val.lovelace
@@ -65,9 +65,9 @@ extension CCardano.CmlValue: CPtr {
     }
 }
 
-public struct TxOutput: Codable {
-    let address: String
-    let value: CmlValue
+public struct TxnOutput: Codable {
+    public let address: String
+    public let value: CmlValue
 
     init(txo: CCardano.CmlTxOutput) {
         address = txo.address.copied()
@@ -76,10 +76,10 @@ public struct TxOutput: Codable {
 }
 
 extension CCardano.CmlTxOutput: CPtr {
-    typealias Val = TxOutput
+    typealias Val = TxnOutput
     
-    func copied() -> TxOutput {
-        TxOutput(txo: self)
+    func copied() -> TxnOutput {
+        TxnOutput(txo: self)
     }
     
     mutating func free() {
@@ -100,9 +100,9 @@ extension COption_CmlTxOutput: COption {
 }
 
 public struct UTxO: Codable {
-    let tx_hash: Data
-    let tx_index: UInt64
-    let orig_output: Optional<TxOutput>
+    public let tx_hash: Data
+    public let tx_index: UInt64
+    public let orig_output: Optional<TxnOutput>
     
     init(utxo: CCardano.CmlUTxO) {
         tx_hash = utxo.tx_hash.copied()
@@ -185,9 +185,9 @@ public struct SwiftTxDetails: Codable {
     public let hash: Data
     public let inputs: Array<UTxO>
     public let collateral: Array<UTxO>?
-    public let collateral_output: TxOutput?
+    public let collateral_output: TxnOutput?
     public let signers: [Data]
-    public let outputs: [TxOutput]
+    public let outputs: [TxnOutput]
                //
     public let sum_outputs: [TxSummaries]
     public let sum_inputs: [TxSummaries]
