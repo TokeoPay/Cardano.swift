@@ -204,7 +204,7 @@ public struct SwiftTxDetails: Codable {
         sum_inputs = txDetails.sum_inputs.copied().map { $0.copied() }
     }
     
-    init(transaction: Data) throws {
+    public init(transaction: Data) throws {
         let txDetails = try CCardano.TxDetails.init(transaction: transaction)
         self.init(txDetails: txDetails)
     }
