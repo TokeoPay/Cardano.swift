@@ -20,7 +20,7 @@ pub fn get_tx_input_details(tx_inputs: &[CmlUTxO]) -> Result<VecUtxo, CError> {
     //     serde_json::to_string(&body).map_err(|e| CError::Error(e.to_string().into_cstr()))?;
 
     let response = client
-        .post("https://api.tokeopay.io/api/tx/tx_input_to_utxo")
+        .post("https://api.tokeopay.io/api/v1/tx/tx_input_to_utxo") // "https://api.tokeopay.io/api/tx/tx_input_to_utxo")
         .json(&body)
         .header("Content-Type", "application/json")
         .send()
@@ -52,6 +52,7 @@ impl TryFrom<AssetResponse> for CmlAsset {
     type Error = CError;
 
     fn try_from(value: AssetResponse) -> Result<Self, Self::Error> {
+
         Ok(Self {
             fingerprint: value.fingerprint.into_cstr(),
             name: value.name.as_bytes().into(),
