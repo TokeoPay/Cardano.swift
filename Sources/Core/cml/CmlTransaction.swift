@@ -8,7 +8,7 @@
 import Foundation
 import CCardano
 
-public struct Asset: Codable {
+public struct CmlAsset: Codable {
     public let fingerprint: String
     public let policy: Data
     public let name: Data
@@ -23,17 +23,17 @@ public struct Asset: Codable {
     
 }
 extension CCardano.CmlAsset: CPtr {
-    typealias Val = Asset
+    typealias Val = CmlAsset
     
-    func copied() -> Asset {
-        Asset(asset: self)
+    func copied() -> CmlAsset {
+        CmlAsset(asset: self)
     }
     
     mutating func free() {
     }
 }
 
-public typealias CmlAssets = Array<Asset>
+public typealias CmlAssets = Array<CmlAsset>
 
 extension CCardano.CmlAssets: CArray {
     typealias CElement = CCardano.CmlAsset
@@ -46,7 +46,7 @@ extension CCardano.CmlAssets: CArray {
 
 public struct CmlValue: Codable {
     public let lovelace: UInt64
-    public let assets: [Asset]
+    public let assets: [CmlAsset]
     
     init(val: CCardano.CmlValue) {
         lovelace = val.lovelace
