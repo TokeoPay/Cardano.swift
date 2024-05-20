@@ -67,6 +67,14 @@ public struct Value: Equatable {
         }
     }
     
+    public init(bytes: Data) throws {
+        try self.init(value: bytes.withCData { cData in
+            RustResult<CCardano.Value>.wrap { result, error in
+                cardano_value_from_bytes(cData, result, error)
+            }
+        }.get())
+    }
+    
     public init(coin: Coin) {
         self.coin = coin
     }

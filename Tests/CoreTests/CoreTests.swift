@@ -27,6 +27,17 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(added.coin, 3)
     }
     
+    func testValueFromBytes() throws {
+        guard let bytes = Data(hex: "821a000f4240a1581c4bf184e01e0f163296ab253edd60774e2d34367d0e7b6cbc689b567da1515061766961506c7573313531506c75733001") else {
+            return
+        }
+        
+        let value = try Value(bytes: bytes);
+        
+        XCTAssertEqual(value.coin, 1000000)
+        XCTAssertEqual(value.multiasset?.count, 1)
+    }
+    
     func testTransactionWitnessSet() throws {
         let data = Data(repeating: 1, count: 64)
         let vkeys = [

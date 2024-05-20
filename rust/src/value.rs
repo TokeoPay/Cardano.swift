@@ -1,9 +1,11 @@
+use crate::data::CData;
 use crate::error::CError;
 use crate::linear_fee::Coin;
 use crate::multi_asset::MultiAsset;
 use crate::option::COption;
 use crate::panic::*;
 use crate::ptr::*;
+use crate::string::IntoCString;
 use cardano_serialization_lib::utils::min_ada_required;
 use cardano_serialization_lib::utils::{from_bignum, to_bignum, Value as RValue};
 
@@ -104,6 +106,20 @@ impl TryFrom<RValue> for Value {
             })
     }
 }
+
+#[no_mangle]
+pub unsafe extern "C" fn cardano_value_from_bytes(
+    bytes: CData,
+    result: &mut Value,
+    error: &mut CError) -> bool {
+
+        handle_exception_result(|| {
+            let bytes = unsafe { bytes.unowned() }?;
+            let core_value = RValue::from_bytes(bytes.into()).map_err(|e| { CError::DeserializeError(e.to_string().into_cstr()) })?;
+            TryInto::<Value>::try_into(core_value)
+        }).response(result, error)
+    }
+
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_value_checked_add(
@@ -222,3 +238,5 @@ pub unsafe extern "C" fn cardano_value_clone(
 pub unsafe extern "C" fn cardano_value_free(value: &mut Value) {
     value.free();
 }
+
+
