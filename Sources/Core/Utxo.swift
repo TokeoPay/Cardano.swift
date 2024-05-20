@@ -73,8 +73,8 @@ extension SwiftUTXO: CPtr {
 }
 
 public struct CoinSelectionResult {
-    let selected: Utxos
-    let other: Utxos
+    public let selected: Utxos
+    public let other: Utxos
 }
 
 extension CCardano.CoinSelectionResult: CPtr {
