@@ -8,6 +8,9 @@
 import Foundation
 import CCardano
 
+
+/* MARK: TxDetails */
+
 public struct CmlAsset: Codable {
     public let fingerprint: String
     public let policy: Data
@@ -231,6 +234,5 @@ extension CCardano.TxDetails {
         }.get()
     }
 }
-
 
 

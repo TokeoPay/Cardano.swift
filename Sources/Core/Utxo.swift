@@ -27,6 +27,12 @@ public struct Utxo {
     public let transaction_index: UInt64
     public let tx_out_bytes: Data
     
+    public init(transaction_hash: String, transaction_index: UInt64, tx_out_bytes: Data) {
+        self.transaction_hash = transaction_hash
+        self.transaction_index = transaction_index
+        self.tx_out_bytes = tx_out_bytes
+    }
+    
     func withCSwiftUtxo<T>(fn: @escaping (SwiftUTXO) throws -> T ) rethrows -> T {
         try transaction_hash.withCString { tx_id in
             try tx_out_bytes.withCData { cdata in
