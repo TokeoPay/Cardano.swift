@@ -112,6 +112,18 @@ public struct UTxO: Codable {
         tx_index = utxo.tx_index
         orig_output = utxo.orig_output.get()?.copied()
     }
+    
+    public init(tx_hash: String, tx_index: UInt64, output: Data) throws {
+        let cmlUtxo = try output.withCData { output in
+            tx_hash.withCString { tx_hash in
+                RustResult<CCardano.CmlUTxO>.wrap { result, error in
+                    utxo_from_parts(tx_hash, tx_index, output, result, error)
+                }
+            }
+        }.get()
+        
+        self.init(utxo: cmlUtxo)
+    }
 }
 
 extension CCardano.CmlUTxO: CPtr {

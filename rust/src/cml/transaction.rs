@@ -8,27 +8,27 @@ use crate::panic::{handle_exception_result, CResponse};
 
 #[allow(unused_imports)]
 use crate::ptr::Ptr;
-
+use crate::string::CharPtr;
 use crate::{data::CData, option::COption, string::IntoCString};
 use cml_chain::address::{Address, RewardAddress};
+use cml_chain::builders::tx_builder::TransactionUnspentOutput;
 use cml_chain::builders::witness_builder::TransactionWitnessSetBuilder;
 use cml_chain::crypto::utils::make_vkey_witness;
-use cml_chain::NonemptySetTransactionInput;
+use cml_chain::{Deserialize, NonemptySetTransactionInput};
+
 use cml_core::serialization::Serialize;
 
 #[allow(unused_imports)]
 use cml_core::serialization::FromBytes;
 
 use cml_crypto::chain_crypto::bech32::Bech32;
-use cml_crypto::{PrivateKey, RawBytesEncoding};
+use cml_crypto::{PrivateKey, RawBytesEncoding, TransactionHash};
 
 #[allow(unused_imports)]
 use blake2::{Blake2b, Digest};
 
 use cml_chain::assets::{MultiAsset, Value as CML_Value};
-// use hex::ToHex;
-
-use ::cml_chain::transaction::{Transaction, TransactionInput, TransactionOutput};
+use cml_chain::transaction::{Transaction, TransactionInput, TransactionOutput};
 
 /* End of Imports */
 
@@ -109,6 +109,16 @@ impl From<NonemptySetTransactionInput> for CmlUTxOs {
     }
 }
 
+impl From<TransactionUnspentOutput> for CmlUTxO {
+    fn from(value: TransactionUnspentOutput) -> Self {
+        Self {
+            tx_hash: value.input.transaction_id.to_raw_bytes().into(),
+            tx_index: value.input.index,
+            orig_output: COption::Some(value.output.into()),
+        }
+    }
+}
+
 impl From<Transaction> for TxDetails {
     fn from(value: Transaction) -> Self {
         let body = value.body;
@@ -122,9 +132,7 @@ impl From<Transaction> for TxDetails {
         println!("Convert UTxOs");
         let utxos: VecUtxo = Into::<VecUtxo>::into(inputs);
         println!("Convert UTxOs after");
-        let tx_input_utxos: VecUtxo = get_tx_input_details(&utxos)
-            .ok()
-            .unwrap_or(utxos);
+        let tx_input_utxos: VecUtxo = get_tx_input_details(&utxos).ok().unwrap_or(utxos);
 
         let c_utxos: Option<VecUtxo> = collateral.map(Into::<VecUtxo>::into);
         let tx_c_input_utxos = c_utxos
@@ -285,6 +293,31 @@ impl From<Transaction> for TxDetails {
 //}
 
 #[no_mangle]
+pub unsafe extern "C" fn utxo_from_parts(
+    tx_hash: CharPtr,
+    index: u64,
+    tx_out_cbor: CData,
+    result: &mut CmlUTxO,
+    error: &mut CError,
+) -> bool {
+    handle_exception_result(|| {
+        let tx_hash = unsafe { tx_hash.unowned() }?;
+        let tx_hash = TransactionHash::from_hex(tx_hash)
+            .map_err(|e| CError::DeserializeError(e.to_string().into_cstr()))?;
+
+        let tx_out_cbor = unsafe { tx_out_cbor.unowned() }?;
+
+        let tx_input = TransactionInput::new(tx_hash, index);
+
+        let tx_output = Deserialize::from_cbor_bytes(tx_out_cbor)
+            .map_err(|e| CError::DeserializeError(e.to_string().into_cstr()))?;
+
+        Ok(Into::<CmlUTxO>::into(TransactionUnspentOutput::new(tx_input, tx_output)))
+    })
+    .response(result, error)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn cml_tx_details(
     transaction: CData,
     result: &mut TxDetails,
@@ -390,7 +423,6 @@ mod transaction_tests {
 
     #[test]
     fn test_tx_details() {
-
         env_logger::init();
         let tx = "84a9008382582048be06cebaaed874f6a27ee61d7f2a18cd7efbbcc0c0708c73566825890700e60082582088dc1916f3579e97f41e5e0f4ba9c245e6179608f19f7e680d04ca8e8000a8970182582017ff24307d62c71cf06e7d9b7fe26e1eabf1af190204b819bbf714f03b30c9af0101868258390170e60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a721e78aae7c90cc36d624f7b3bb6d86b52696dc84e490f343eba89005f1a000f4240825839019737419ac8cf4a69ac64440a1a734c2c50b18d423e499f289a5267d4bf1aacd8be15b54f3cb0837e92302e2040c89718973b5d8f763a03931a000f424082583901d2f63bb93a46252714598085271f2368e8669f8aaf8f5fab4e4fc2f5d6a3bf692f79c73710e92f431adf0bcb4aa17ecb0b3b126bb1defa5d1a002dc6c082583901a298fd66dc9060b11f0a8679cd8516ef14c31236c2dfb1a2ae933788131f44c4a43b3c6ea5b2aaf660d167f894fa133ae33d5cdc62a3d9f0821a002df852a7581c279c909f348e533da5808898f87f9a14bb2c3dfbbacccd631d927a3fa144534e454b1930ad581c693c3defceb1b7d27d1bf91f52b65b59b11b66b066d10c8d6d461f4ca154000de140515244414e4f5345525645523033323201581c77999d5a1e09f9bdc16393cab713f26345dc0827a9e5134cf0f9da37a24c4d756c67614b6f6e67333731014d4d756c67614b6f6e673338313901581c95a427e384527065f2f8946f5e86320d0117839a5e98ea2c0b55fb00a14448554e541a06052340581ca5b2464b242dcbc97c1f65e85753b04ba979645f693a806a394a4931a1494d69644b6e696768741a867e44fc581ca7bf4ce10dca4f5f99b081c4ea84e0e3f919775b953324e09edea852a14d536865446576696c733131363601581cba92e5f4665a026f7d5f2f223d398d2d8b649e147b5163b759bd61a0ad4a54696765727a32373739014a54696765727a33383630014a54696765727a33383631014a54696765727a33383632014a54696765727a33383633014a54696765727a33383634014a54696765727a33383635014a54696765727a33383636014a54696765727a33383637014a54696765727a33383638014a54696765727a33383639014a54696765727a33383730014a54696765727a333837310182583901a298fd66dc9060b11f0a8679cd8516ef14c31236c2dfb1a2ae933788131f44c4a43b3c6ea5b2aaf660d167f894fa133ae33d5cdc62a3d9f0821a001898a4a3581cba92e5f4665a026f7d5f2f223d398d2d8b649e147b5163b759bd61a0a24a54696765727a33383732014a54696765727a3532303301581cbb143df7e6472b158014023d8a1c592d38be8771ce4c01f4fcd65c63a148323630313235363301581cc72d0438330ed1346f4437fcc1c263ea38e933c1124c8d0f2abc6312a2484b5749433034303501484b574943313230340182583901a298fd66dc9060b11f0a8679cd8516ef14c31236c2dfb1a2ae933788131f44c4a43b3c6ea5b2aaf660d167f894fa133ae33d5cdc62a3d9f01a032e7f60021a0007465d031a074b3efa0b58204bcd043768b51437bc8087ffe6b740ada67f7a899d12c1445d28a00808ea79d80d8182582017ff24307d62c71cf06e7d9b7fe26e1eabf1af190204b819bbf714f03b30c9af011082583901a298fd66dc9060b11f0a8679cd8516ef14c31236c2dfb1a2ae933788131f44c4a43b3c6ea5b2aaf660d167f894fa133ae33d5cdc62a3d9f01a036900e0111a000ae98c12818258209a32459bd4ef6bbafdeb8cf3b909d0e3e2ec806e4cc6268529280b0fc1d06f5b00a2049fd8799f581cd2f63bb93a46252714598085271f2368e8669f8aaf8f5fab4e4fc2f59fd8799fd8799fd8799f581c70e60f3b5ea7153e0acc7a803e4401d44b8ed1bae1c7baaad1a62a72ffd8799fd8799fd8799f581c1e78aae7c90cc36d624f7b3bb6d86b52696dc84e490f343eba89005fffffffffa140d8799f00a1401a000f4240ffffd8799fd8799fd8799f581c9737419ac8cf4a69ac64440a1a734c2c50b18d423e499f289a5267d4ffd8799fd8799fd8799f581cbf1aacd8be15b54f3cb0837e92302e2040c89718973b5d8f763a0393ffffffffa140d8799f00a1401a000f4240ffffd8799fd8799fd8799f581cd2f63bb93a46252714598085271f2368e8669f8aaf8f5fab4e4fc2f5ffd8799fd8799fd8799f581cd6a3bf692f79c73710e92f431adf0bcb4aa17ecb0b3b126bb1defa5dffffffffa140d8799f00a1401a002dc6c0ffffffffff0581840001d87a80821a002f5dee1a34ddb004f5f6";
 
