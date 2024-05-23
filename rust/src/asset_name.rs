@@ -55,19 +55,37 @@ impl TryFrom<AssetName> for RAssetName {
 impl TryFrom<CML_AssetName> for AssetName {
     type Error = CError;
 
-    fn try_from(asset: CML_AssetName) -> std::prelude::v1::Result<Self, Self::Error> {
-        let mut name = asset.inner;
+    fn try_from(value: CML_AssetName) -> Result<Self> {
+        let mut name = value.get().clone();
         let len = name.len();
         if len < 32 {
             name.append(&mut vec![0; 32 - len]);
         }
         let bytes: [u8; 32] = name.try_into().map_err(|_| CError::DataLengthMismatch)?;
+
         Ok(Self {
-            bytes,
-            len: len as u8,
+            bytes: bytes.clone(),
+            len: len as u8
         })
     }
 }
+
+// impl TryFrom<CML_AssetName> for AssetName {
+//     type Error = CError;
+
+//     fn try_from(asset: CML_AssetName) -> std::prelude::v1::Result<Self, Self::Error> {
+//         let mut name = asset.inner;
+//         let len = name.len();
+//         if len < 32 {
+//             name.append(&mut vec![0; 32 - len]);
+//         }
+//         let bytes: [u8; 32] = name.try_into().map_err(|_| CError::DataLengthMismatch)?;
+//         Ok(Self {
+//             bytes,
+//             len: len as u8,
+//         })
+//     }
+// }
 
 impl TryFrom<AssetName> for CML_AssetName {
     type Error = CError;

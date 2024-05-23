@@ -12,6 +12,8 @@ use cardano_serialization_lib::crypto::{
 use cardano_serialization_lib::Ed25519KeyHashes as REd25519KeyHashes;
 use std::convert::{TryFrom, TryInto};
 
+use cml_crypto::{RawBytesEncoding, ScriptHash as CML_ScriptHash};
+
 #[repr(C)]
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
 pub struct Ed25519KeyHash {
@@ -22,6 +24,7 @@ pub struct Ed25519KeyHash {
 impl Free for Ed25519KeyHash {
     unsafe fn free(&mut self) {}
 }
+
 
 impl TryFrom<REd25519KeyHash> for Ed25519KeyHash {
     type Error = CError;
@@ -79,6 +82,18 @@ pub unsafe extern "C" fn cardano_ed25519_key_hashes_free(
 pub struct ScriptHash {
     bytes: [u8; 28],
     len: u8,
+}
+
+
+impl TryFrom<CML_ScriptHash> for ScriptHash {
+    type Error = CError;
+
+    fn try_from(hash: CML_ScriptHash) -> std::prelude::v1::Result<Self, Self::Error> {
+        let bytes = hash.to_raw_bytes();
+        let len = bytes.len() as u8;
+        let bytes: [u8; 28] = bytes.try_into().map_err(|_| CError::DataLengthMismatch)?;
+        Ok(Self { bytes, len })
+    }
 }
 
 impl TryFrom<RScriptHash> for ScriptHash {

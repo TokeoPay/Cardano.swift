@@ -3,6 +3,10 @@ use super::asset_name::AssetName;
 use super::error::CError;
 use super::panic::*;
 use super::ptr::*;
+
+use cml_chain::OrderedHashMap;
+use cml_chain::assets::AssetName as CML_AssetName;
+
 use cardano_serialization_lib::{
   utils::{from_bignum, to_bignum},
   Assets as RAssets,
@@ -18,6 +22,31 @@ pub unsafe extern "C" fn cardano_asset_names_free(asset_names: &mut AssetNames) 
 
 pub type AssetsKeyValue = CKeyValue<AssetName, u64>;
 pub type Assets = CArray<AssetsKeyValue>;
+
+
+impl TryFrom<OrderedHashMap<CML_AssetName, u64>> for Assets {
+  type Error = CError;
+    fn try_from(value: OrderedHashMap<CML_AssetName, u64>) -> Result<Self> {
+
+        let x = value.iter()
+         .map(|(asset_name, amt)| {
+            TryInto::<AssetName>::try_into(asset_name.clone())
+              .map(|asset_name| {
+                (asset_name, amt.clone())
+              })
+          })
+          .collect::<Result<Vec<_>>>()
+          .map(|res| {
+            Into::<Assets>::into(res)
+          });
+
+          x.into()
+    }
+
+    
+}
+
+
 
 impl TryFrom<Assets> for RAssets {
   type Error = CError;

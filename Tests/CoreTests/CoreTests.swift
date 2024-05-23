@@ -36,6 +36,12 @@ final class CoreTests: XCTestCase {
         
         XCTAssertEqual(value.coin, 1000000)
         XCTAssertEqual(value.multiasset?.count, 1)
+        
+        
+        let policy = try PolicyID(bytes: Data(hex: "4bf184e01e0f163296ab253edd60774e2d34367d0e7b6cbc689b567d")! )
+        let asset = try AssetName(name: Data(hex: "5061766961506c7573313531506c757330")!)
+        
+        XCTAssertEqual(value.multiasset?[policy]?[asset], 1)
     }
     
     func testTransactionWitnessSet() throws {

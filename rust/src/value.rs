@@ -10,6 +10,7 @@ use cardano_serialization_lib::utils::min_ada_required;
 use cardano_serialization_lib::utils::{from_bignum, to_bignum, Value as RValue};
 
 use cml_chain::assets::AssetBundle;
+use cml_chain::Deserialize;
 
 use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
@@ -107,6 +108,24 @@ impl TryFrom<RValue> for Value {
     }
 }
 
+impl TryFrom<CML_Value> for Value {
+    type Error = CError;
+
+    fn try_from(value: CML_Value) -> Result<Self> {
+
+        let ma = match value.multiasset.len() {
+            0 => COption::None,
+            _ => COption::Some(value.multiasset.try_into()?)
+        };
+
+        Ok(Self {
+            coin: value.coin,
+            multiasset: ma
+        })
+    }
+}
+
+
 #[no_mangle]
 pub unsafe extern "C" fn cardano_value_from_bytes(
     bytes: CData,
@@ -115,7 +134,7 @@ pub unsafe extern "C" fn cardano_value_from_bytes(
 
         handle_exception_result(|| {
             let bytes = unsafe { bytes.unowned() }?;
-            let core_value = RValue::from_bytes(bytes.into()).map_err(|e| { CError::DeserializeError(e.to_string().into_cstr()) })?;
+            let core_value = CML_Value::from_cbor_bytes(bytes).map_err(|e| { CError::DeserializeError(e.to_string().into_cstr()) })?;
             TryInto::<Value>::try_into(core_value)
         }).response(result, error)
     }
@@ -237,6 +256,50 @@ pub unsafe extern "C" fn cardano_value_clone(
 #[no_mangle]
 pub unsafe extern "C" fn cardano_value_free(value: &mut Value) {
     value.free();
+}
+
+
+#[cfg(test)]
+mod value_tests {
+    use cml_chain::Deserialize;
+    use super::*;
+
+    #[test]
+    fn test_value_from_bytes() {
+        let cbor = "821a000f4240a1581c4bf184e01e0f163296ab253edd60774e2d34367d0e7b6cbc689b567da1515061766961506c7573313531506c75733001";
+
+        let value = CML_Value::from_cbor_bytes(hex::decode(cbor).unwrap().as_slice() ).unwrap();
+
+        assert_eq!(value.coin , 1000000);
+        let ma = value.multiasset;        
+        ma.iter().for_each(|(policy, assets) | {
+            assets.iter().for_each(|(asset_name, amt)| {
+                println!("Asset: {}{} = {}", policy.to_hex(), hex::encode(asset_name.get()), amt);
+                assert_eq!(policy.to_hex() , "4bf184e01e0f163296ab253edd60774e2d34367d0e7b6cbc689b567d");
+                assert_eq!(hex::encode(asset_name.get()), "5061766961506c7573313531506c757330");
+                // assert_eq!(amt, 1);
+            })
+        });
+
+    }
+
+    #[test]
+    fn test_cardano_value_from_bytes() {
+        let cbor = "821a000f4240a1581c4bf184e01e0f163296ab253edd60774e2d34367d0e7b6cbc689b567da1515061766961506c7573313531506c75733001";
+
+        let mut value: Value = Value { coin: 0, multiasset: COption::None };
+        let mut error: CError = CError::NullPtr;
+
+        unsafe { 
+            cardano_value_from_bytes(hex::decode(cbor).unwrap().into(), 
+            &mut value, 
+            &mut error) 
+        };
+
+        assert_eq!(value.coin , 1000000);
+
+    }
+
 }
 
 

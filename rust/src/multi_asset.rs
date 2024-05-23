@@ -31,6 +31,21 @@ impl TryFrom<COption<MultiAsset>> for AssetBundle<u64> {
     }
 }
 
+impl TryFrom<AssetBundle<u64>> for MultiAsset {
+    type Error = CError;
+    fn try_from(assets: AssetBundle<u64>) -> Result<Self> {
+        assets.iter().map(|(policy, assets)| {
+            TryInto::<Assets>::try_into(assets.clone()).zip(
+                TryInto::<ScriptHash>::try_into(policy.clone())
+            ).and_then(|(assets, policy)| {
+                Ok( Into::<MultiAssetKeyValue>::into((policy, assets)) )
+            })
+        }).collect::<Result<Vec<_>>>().map(|ma| {
+            From::<MultiAsset>::from(ma.clone().into())
+        })
+    }
+}
+
 impl TryFrom<MultiAsset> for AssetBundle<u64> {
     type Error = CError;
 
