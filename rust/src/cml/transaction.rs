@@ -87,7 +87,11 @@ impl From<CML_Value> for CmlValue {
 impl From<TransactionOutput> for CmlTxOutput {
     fn from(value: TransactionOutput) -> Self {
         Self {
-            address: hex::encode(value.address().to_raw_bytes()).into_cstr(),
+            address: value
+                .address()
+                .to_bech32(Option::None)
+                .unwrap_or("<Address Error>".to_ascii_lowercase())
+                .into_cstr(),
             value: Into::<CmlValue>::into(value.amount().clone()),
         }
     }
@@ -128,6 +132,7 @@ impl From<Transaction> for TxDetails {
         let collateral_return = body.collateral_return.clone();
         let outputs = body.outputs.clone();
         let hash = body.hash();
+        let certs = body.certs.clone();
 
         println!("Convert UTxOs");
         let utxos: VecUtxo = Into::<VecUtxo>::into(inputs);
@@ -245,6 +250,49 @@ impl From<Transaction> for TxDetails {
             .collect::<Option<Vec<_>>>()
             .unwrap_or(Vec::new());
 
+        let cert_signers = certs.and_then(|certs| {
+            certs
+                .iter()
+                .map(|cert| match cert {
+                    cml_chain::certs::Certificate::StakeRegistration(s) => {
+                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                    }
+                    cml_chain::certs::Certificate::StakeDeregistration(s) => {
+                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                    }
+                    cml_chain::certs::Certificate::StakeDelegation(s) => {
+                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                    }
+                    cml_chain::certs::Certificate::PoolRegistration(_) => None,
+                    cml_chain::certs::Certificate::PoolRetirement(_) => None,
+                    cml_chain::certs::Certificate::RegCert(_) => None,
+                    cml_chain::certs::Certificate::UnregCert(_) => None,
+                    cml_chain::certs::Certificate::VoteDelegCert(_) => None,
+                    cml_chain::certs::Certificate::StakeVoteDelegCert(s) => {
+                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                    }
+                    cml_chain::certs::Certificate::StakeRegDelegCert(s) => {
+                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                    }
+                    cml_chain::certs::Certificate::VoteRegDelegCert(_) => None,
+                    cml_chain::certs::Certificate::StakeVoteRegDelegCert(s) => {
+                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                    }
+                    cml_chain::certs::Certificate::AuthCommitteeHotCert(_) => None,
+                    cml_chain::certs::Certificate::ResignCommitteeColdCert(_) => None,
+                    cml_chain::certs::Certificate::RegDrepCert(_) => None,
+                    cml_chain::certs::Certificate::UnregDrepCert(_) => None,
+                    cml_chain::certs::Certificate::UpdateDrepCert(_) => None,
+                })
+                .collect::<Option<Vec<_>>>()
+        });
+
+        if let Some(cert_signers) = cert_signers {
+            signers.extend(cert_signers)
+        } else {
+            print!("No Cert Signers")
+        };
+
         signers.extend(c_signers);
 
         Self {
@@ -312,7 +360,9 @@ pub unsafe extern "C" fn utxo_from_parts(
         let tx_output = Deserialize::from_cbor_bytes(tx_out_cbor)
             .map_err(|e| CError::DeserializeError(e.to_string().into_cstr()))?;
 
-        Ok(Into::<CmlUTxO>::into(TransactionUnspentOutput::new(tx_input, tx_output)))
+        Ok(Into::<CmlUTxO>::into(TransactionUnspentOutput::new(
+            tx_input, tx_output,
+        )))
     })
     .response(result, error)
 }

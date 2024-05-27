@@ -55,8 +55,8 @@ let ccardano: Target = useLocalBinary ?
         path: "rust/binaries/CCardano.xcframework") :
     .binaryTarget(
         name: "CCardano",
-        url: "https://pub-5314ba2a19a94f41912a726140440b24.r2.dev/CCardano.binaries.3ad091d.zip",
-        checksum: "3ad091defc612a31025393161c6cb46a65a95f2be5c32048a6de44964b5b5d45")
+        url: "https://pub-5314ba2a19a94f41912a726140440b24.r2.dev/CCardano.binaries.305031fa.zip",
+        checksum: "305031faa4676c0fcb55a9d00331b768f15d5a3d3b2ca8b80a663e196d58fb90")
 package.targets.append(contentsOf: [
     ccardano,
     .target(
