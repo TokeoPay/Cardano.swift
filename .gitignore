@@ -102,3 +102,4 @@ rust/patches/cardano-serialization-lib-10.2.0/.cargo-ok
 include
 lib
 .env
+.zed

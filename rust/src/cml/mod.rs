@@ -50,6 +50,7 @@ impl Free for CmlValue {
 pub struct CmlTxOutput {
     address: CharPtr,
     value: CmlValue,
+    cbor: CData,
 }
 
 impl Free for CmlTxOutput {

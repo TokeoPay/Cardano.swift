@@ -14,6 +14,7 @@ use cml_chain::address::{Address, RewardAddress};
 use cml_chain::builders::tx_builder::TransactionUnspentOutput;
 use cml_chain::builders::witness_builder::TransactionWitnessSetBuilder;
 use cml_chain::crypto::utils::make_vkey_witness;
+use cml_chain::min_ada::min_ada_required;
 use cml_chain::{Deserialize, NonemptySetTransactionInput};
 
 use cml_core::serialization::Serialize;
@@ -93,6 +94,7 @@ impl From<TransactionOutput> for CmlTxOutput {
                 .unwrap_or("<Address Error>".to_ascii_lowercase())
                 .into_cstr(),
             value: Into::<CmlValue>::into(value.amount().clone()),
+            cbor: value.to_cbor_bytes().into(),
         }
     }
 }
@@ -339,6 +341,27 @@ impl From<Transaction> for TxDetails {
 //        b32
 //    }
 //}
+
+#[no_mangle]
+pub unsafe extern "C" fn available_lovelace(
+    tx_out_cbor: CData,
+    coins_per_utxo_byte: u64,
+    result: &mut u64,
+    error: &mut CError,
+) -> bool {
+    handle_exception_result(|| {
+        let tx_out_cbor = unsafe { tx_out_cbor.unowned() }?;
+        let tx_output = Deserialize::from_cbor_bytes(tx_out_cbor)
+            .map_err(|e| CError::DeserializeError(e.to_string().into_cstr()))?;
+
+        let min_lovelace = min_ada_required(&tx_output, coins_per_utxo_byte)
+            .map_err(|err| CError::Error(err.to_string().into_cstr()))?;
+        let lovelace_on_output = tx_output.amount().coin;
+
+        Ok(lovelace_on_output - min_lovelace)
+    })
+    .response(result, error)
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn utxo_from_parts(
