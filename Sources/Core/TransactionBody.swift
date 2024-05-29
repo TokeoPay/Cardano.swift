@@ -343,7 +343,6 @@ public struct TransactionBody {
     public var networkId: NetworkId?
     
     init(transactionBody: CCardano.TransactionBody) {
-        print(transactionBody.ttl.get())
         inputs = transactionBody.inputs.copied()
         outputs = transactionBody.outputs.copied().map { $0.copied() }
         fee = transactionBody.fee

@@ -71,10 +71,12 @@ extension CCardano.CmlValue: CPtr {
 public struct TxnOutput: Codable {
     public let address: String
     public let value: CmlValue
+    public let cbor: Data
 
     init(txo: CCardano.CmlTxOutput) {
         address = txo.address.copied()
         value = txo.value.copied()
+        cbor = txo.cbor.copied()
     }
 }
 
@@ -106,7 +108,6 @@ public struct UTxO: Codable {
     public let tx_hash: Data
     public let tx_index: UInt64
     public let orig_output: Optional<TxnOutput>
-    let core_output: Data
     
     init(utxo: CCardano.CmlUTxO) {
         tx_hash = utxo.tx_hash.copied()
@@ -127,13 +128,18 @@ public struct UTxO: Codable {
     }
     
     public func getMinAdaForUtxo() throws -> Int64 {
-        let ll = try self.core_output.withCData { output in
-            RustResult<UInt64>.wrap { result, error in
-                available_lovelace(output, 4310, result, error) //TODO: Coins Per UTxO byte could change. How to get this value from chain?
-            }
-        }.get()
         
-        return Int64(ll)
+        if let output = self.orig_output {
+            let ll = try output.cbor.withCData { output in
+                RustResult<UInt64>.wrap { result, error in
+                    available_lovelace(output, 4310, result, error) //TODO: Coins Per UTxO byte could change. How to get this value from chain?
+                }
+            }.get()
+            
+            return Int64(ll)
+        }
+        
+        return 0
     }
 }
 
