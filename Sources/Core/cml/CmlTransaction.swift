@@ -24,7 +24,28 @@ public struct CmlAsset: Codable {
         qty = asset.qty
     }
     
+    /**
+     * Try and decode the Asset name into UTF8, should handle CIP25 and CIP68 assets.
+     * If we fail in our task we return the Hex encoding of the name.
+     */
+    public func utf8Name() -> String {
+        guard let theName = String.init(data: name, encoding: String.Encoding.utf8) else {
+            if name.count < 5 {
+                return name.hex(prefix: false)
+            }
+            let subData = name.subdata(in: Range(4...name.count - 1))
+            
+            guard let theName = String.init(data: subData, encoding: String.Encoding.utf8) else {
+                return name.hex(prefix: false)
+            }
+            
+            return theName
+        }
+        
+        return theName
+    }
 }
+
 extension CCardano.CmlAsset: CPtr {
     typealias Val = CmlAsset
     
