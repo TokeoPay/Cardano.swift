@@ -52,7 +52,12 @@ impl TryFrom<AssetResponse> for CmlAsset {
     fn try_from(value: AssetResponse) -> Result<Self, Self::Error> {
         Ok(Self {
             fingerprint: value.fingerprint.into_cstr(),
-            name: value.name.as_bytes().into(),
+            name: hex::decode(value.name)
+                .map_err(|e| {
+                    print!("{:?}", e);
+                    CError::DeserializeError("Unable to decode Token name".into_cstr())
+                })?
+                .into(),
             policy: hex::decode(value.policy)
                 .map_err(|e| {
                     print!("{:?}", e);
