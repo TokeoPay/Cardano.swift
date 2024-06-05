@@ -53,7 +53,12 @@ impl TryFrom<AssetResponse> for CmlAsset {
         Ok(Self {
             fingerprint: value.fingerprint.into_cstr(),
             name: value.name.as_bytes().into(),
-            policy: value.policy.as_bytes().into(),
+            policy: hex::decode(value.policy)
+                .map_err(|e| {
+                    print!("{:?}", e);
+                    CError::DeserializeError("Unable to decode Policy".into_cstr())
+                })?
+                .into(),
             qty: value
                 .qty
                 .parse()
@@ -61,6 +66,7 @@ impl TryFrom<AssetResponse> for CmlAsset {
         })
     }
 }
+
 impl TryFrom<Vec<AssetResponse>> for CmlAssets {
     type Error = CError;
 
