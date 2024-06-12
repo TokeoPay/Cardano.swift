@@ -164,6 +164,19 @@ public struct UTxO: Codable {
     }
 }
 
+public func tx_merge_in_witness_set(transaction: Data, witness_set: Data) throws -> Data {
+    let result = try transaction.withCData { txn in
+        witness_set.withCData { ws in
+            RustResult<Data>.wrap { result, error in
+                cml_tx_add_signers(txn, ws, result, error)
+            }
+        }
+    }.get()
+    
+    return result.copied()
+}
+
+
 extension CCardano.CmlUTxO: CPtr {
     typealias Val = UTxO
     

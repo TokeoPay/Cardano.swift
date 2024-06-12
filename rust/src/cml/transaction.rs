@@ -16,20 +16,15 @@ use cml_chain::builders::witness_builder::TransactionWitnessSetBuilder;
 use cml_chain::crypto::utils::make_vkey_witness;
 use cml_chain::min_ada::min_ada_required;
 use cml_chain::{Deserialize, NonemptySetTransactionInput};
-
 use cml_core::serialization::Serialize;
-
 #[allow(unused_imports)]
 use cml_core::serialization::FromBytes;
-
 use cml_crypto::chain_crypto::bech32::Bech32;
 use cml_crypto::{PrivateKey, RawBytesEncoding, TransactionHash};
-
 #[allow(unused_imports)]
 use blake2::{Blake2b, Digest};
-
 use cml_chain::assets::{MultiAsset, Value as CML_Value};
-use cml_chain::transaction::{Transaction, TransactionInput, TransactionOutput};
+use cml_chain::transaction::{Transaction, TransactionInput, TransactionOutput, TransactionWitnessSet};
 
 /* End of Imports */
 
@@ -406,6 +401,38 @@ pub unsafe extern "C" fn cml_tx_details(
             .and_then(|txn| Ok(Into::<TxDetails>::into(txn)));
 
         x
+    })
+    .response(result, error)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn cml_tx_add_signers(
+    transaction: CData,
+    tx_witness_set: CData,
+    result: &mut CData,
+    error: &mut CError
+) -> bool {
+
+    handle_exception_result(|| {
+        let tx_bytes = transaction.unowned()?;
+        let tx_witness_set_bytes = tx_witness_set.unowned()?;
+        let tx = Transaction::from_bytes(tx_bytes.to_vec())
+            .map_err(|_| CError::Error("Tx Build Error".into_cstr()))?;
+
+        let tx_witness_set: TransactionWitnessSet = Deserialize::from_cbor_bytes(tx_witness_set_bytes).map_err(|err| {
+            println!("{:?}", err);
+            CError::Error("Tx Build Error - Bad Witness Set".into_cstr())})?;
+
+        let new_tx = Transaction::new(
+            tx.body,
+            tx_witness_set,
+            true,
+            tx.auxiliary_data
+        );
+
+        let res = Serialize::to_cbor_bytes(&new_tx);
+
+        Ok(res.into())
     })
     .response(result, error)
 }
