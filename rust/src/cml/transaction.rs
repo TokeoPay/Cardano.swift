@@ -1,3 +1,6 @@
+use std::collections::HashSet;
+use std::iter::FromIterator;
+
 use super::tx_input_details::get_tx_input_details;
 use super::{
     AssetName, CmlAsset, CmlAssets, CmlTxOutput, CmlTxSummarised, CmlUTxO, CmlUTxOs, CmlValue,
@@ -10,21 +13,23 @@ use crate::panic::{handle_exception_result, CResponse};
 use crate::ptr::Ptr;
 use crate::string::CharPtr;
 use crate::{data::CData, option::COption, string::IntoCString};
+#[allow(unused_imports)]
+use blake2::{Blake2b, Digest};
 use cml_chain::address::{Address, RewardAddress};
+use cml_chain::assets::{MultiAsset, Value as CML_Value};
 use cml_chain::builders::tx_builder::TransactionUnspentOutput;
 use cml_chain::builders::witness_builder::TransactionWitnessSetBuilder;
 use cml_chain::crypto::utils::make_vkey_witness;
 use cml_chain::min_ada::min_ada_required;
+use cml_chain::transaction::{
+    Transaction, TransactionInput, TransactionOutput, TransactionWitnessSet,
+};
 use cml_chain::{Deserialize, NonemptySetTransactionInput};
-use cml_core::serialization::Serialize;
 #[allow(unused_imports)]
 use cml_core::serialization::FromBytes;
+use cml_core::serialization::Serialize;
 use cml_crypto::chain_crypto::bech32::Bech32;
 use cml_crypto::{PrivateKey, RawBytesEncoding, TransactionHash};
-#[allow(unused_imports)]
-use blake2::{Blake2b, Digest};
-use cml_chain::assets::{MultiAsset, Value as CML_Value};
-use cml_chain::transaction::{Transaction, TransactionInput, TransactionOutput, TransactionWitnessSet};
 
 /* End of Imports */
 
@@ -130,6 +135,7 @@ impl From<Transaction> for TxDetails {
         let outputs = body.outputs.clone();
         let hash = body.hash();
         let certs = body.certs.clone();
+        let required_signers = body.required_signers.clone();
 
         println!("Convert UTxOs");
         let utxos: VecUtxo = Into::<VecUtxo>::into(inputs);
@@ -231,20 +237,26 @@ impl From<Transaction> for TxDetails {
             .collect::<Option<Vec<CmlTxSummarised>>>()
             .unwrap_or(Vec::new());
 
-        let c_signers: Vec<Vec<u8>> = tx_c_input_utxos
+        let c_signers: Vec<String> = tx_c_input_utxos
             .as_ref()
             .map(|x| {
                 x.iter()
-                    .map(|utxo| utxo.get_signing_hash())
+                    .map(|utxo| match utxo.get_signing_hash() {
+                        Some(hash) => Some(hex::encode(hash)),
+                        None => None,
+                    })
                     .collect::<Option<Vec<_>>>()
                     .unwrap_or(Vec::new())
             })
             .unwrap_or(Vec::new());
 
-        let mut signers: Vec<Vec<u8>> = tx_input_utxos // This needs to be replaced with `tx_input_utxos` and `tx_collateral`
+        let mut signers: Vec<String> = tx_input_utxos // This needs to be replaced with `tx_input_utxos` and `tx_collateral`
             .iter()
-            .map(|utxo| utxo.get_signing_hash())
-            .collect::<Option<Vec<_>>>()
+            .map(|utxo| match utxo.get_signing_hash() {
+                Some(hash) => Some(hex::encode(hash)),
+                None => None,
+            })
+            .collect::<Option<Vec<String>>>()
             .unwrap_or(Vec::new());
 
         let cert_signers = certs.and_then(|certs| {
@@ -252,13 +264,13 @@ impl From<Transaction> for TxDetails {
                 .iter()
                 .map(|cert| match cert {
                     cml_chain::certs::Certificate::StakeRegistration(s) => {
-                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                        Some(hex::encode(s.stake_credential.to_raw_bytes().to_owned()))
                     }
                     cml_chain::certs::Certificate::StakeDeregistration(s) => {
-                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                        Some(hex::encode(s.stake_credential.to_raw_bytes().to_owned()))
                     }
                     cml_chain::certs::Certificate::StakeDelegation(s) => {
-                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                        Some(hex::encode(s.stake_credential.to_raw_bytes().to_owned()))
                     }
                     cml_chain::certs::Certificate::PoolRegistration(_) => None,
                     cml_chain::certs::Certificate::PoolRetirement(_) => None,
@@ -266,14 +278,14 @@ impl From<Transaction> for TxDetails {
                     cml_chain::certs::Certificate::UnregCert(_) => None,
                     cml_chain::certs::Certificate::VoteDelegCert(_) => None,
                     cml_chain::certs::Certificate::StakeVoteDelegCert(s) => {
-                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                        Some(hex::encode(s.stake_credential.to_raw_bytes()))
                     }
                     cml_chain::certs::Certificate::StakeRegDelegCert(s) => {
-                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                        Some(hex::encode(s.stake_credential.to_raw_bytes()))
                     }
                     cml_chain::certs::Certificate::VoteRegDelegCert(_) => None,
                     cml_chain::certs::Certificate::StakeVoteRegDelegCert(s) => {
-                        Some(s.stake_credential.to_raw_bytes().to_owned())
+                        Some(hex::encode(s.stake_credential.to_raw_bytes()))
                     }
                     cml_chain::certs::Certificate::AuthCommitteeHotCert(_) => None,
                     cml_chain::certs::Certificate::ResignCommitteeColdCert(_) => None,
@@ -284,6 +296,15 @@ impl From<Transaction> for TxDetails {
                 .collect::<Option<Vec<_>>>()
         });
 
+        if let Some(required_signers) = required_signers {
+            signers.extend(
+                required_signers
+                    .iter()
+                    .map(|s| s.to_raw_hex())
+                    .collect::<Vec<String>>(),
+            );
+        }
+
         if let Some(cert_signers) = cert_signers {
             signers.extend(cert_signers)
         } else {
@@ -291,6 +312,12 @@ impl From<Transaction> for TxDetails {
         };
 
         signers.extend(c_signers);
+
+        let tmp_hash: HashSet<String, _> = HashSet::<String>::from_iter(signers);
+        let signers: Vec<Vec<u8>> = Vec::from_iter(tmp_hash.iter())
+            .iter()
+            .map(|s| hex::decode(s).unwrap_or_default())
+            .collect();
 
         Self {
             inputs: tx_input_utxos.clone().into(),
@@ -410,25 +437,21 @@ pub unsafe extern "C" fn cml_tx_add_signers(
     transaction: CData,
     tx_witness_set: CData,
     result: &mut CData,
-    error: &mut CError
+    error: &mut CError,
 ) -> bool {
-
     handle_exception_result(|| {
         let tx_bytes = transaction.unowned()?;
         let tx_witness_set_bytes = tx_witness_set.unowned()?;
         let tx = Transaction::from_bytes(tx_bytes.to_vec())
             .map_err(|_| CError::Error("Tx Build Error".into_cstr()))?;
 
-        let tx_witness_set: TransactionWitnessSet = Deserialize::from_cbor_bytes(tx_witness_set_bytes).map_err(|err| {
-            println!("{:?}", err);
-            CError::Error("Tx Build Error - Bad Witness Set".into_cstr())})?;
+        let tx_witness_set: TransactionWitnessSet =
+            Deserialize::from_cbor_bytes(tx_witness_set_bytes).map_err(|err| {
+                println!("{:?}", err);
+                CError::Error("Tx Build Error - Bad Witness Set".into_cstr())
+            })?;
 
-        let new_tx = Transaction::new(
-            tx.body,
-            tx_witness_set,
-            true,
-            tx.auxiliary_data
-        );
+        let new_tx = Transaction::new(tx.body, tx_witness_set, true, tx.auxiliary_data);
 
         let res = Serialize::to_cbor_bytes(&new_tx);
 
