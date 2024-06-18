@@ -298,4 +298,39 @@ extension CCardano.TxDetails {
     }
 }
 
+public struct SwiftMempoolUtxos: Codable {
+    let spent_inputs: Array<UTxO>
+    let created_utxos: Array<UTxO>
+    
+    init(spent_inputs: Array<UTxO>, created_utxos: Array<UTxO>) {
+        self.spent_inputs = spent_inputs
+        self.created_utxos = created_utxos
+    }
+    
+    init(core: CCardano.MempoolUtxos) {
+        created_utxos = core.created_utxos.copied().map { $0.copied() }
+        spent_inputs = core.spent_inputs.copied().map { $0.copied() }
+    }
+    
+    public init(tx: Data) throws {
+        let txnData = try tx.withCData { bytes in
+            RustResult<CCardano.MempoolUtxos>.wrap { result, error in
+                cml_tx_utxo_result(bytes, result, error)
+            }
+        }.get()
+        
+        self = Self.init(core: txnData)
+    }
+}
+
+extension CCardano.MempoolUtxos: CPtr {
+    typealias Val = SwiftMempoolUtxos
+    
+    func copied() -> SwiftMempoolUtxos {
+        SwiftMempoolUtxos.init(core: self)
+    }
+    mutating func free() {
+        
+    }
+}
 

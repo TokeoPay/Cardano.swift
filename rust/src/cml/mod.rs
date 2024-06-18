@@ -6,8 +6,11 @@ use crate::{array::CArray, data::CData, option::COption, ptr::Free, string::Char
 use blake2::digest::{Update, VariableOutput};
 use blake2::Blake2bVar;
 use cml_chain::address::Address;
+use cml_chain::transaction::Transaction;
 use cml_chain::NonemptySetTransactionInput;
 use cml_crypto::chain_crypto::bech32::{to_bech32_from_bytes, Bech32};
+use cml_crypto::RawBytesEncoding;
+pub mod chain_helper;
 pub mod transaction;
 pub mod tx_input_details;
 
@@ -212,5 +215,44 @@ impl From<NonemptySetTransactionInput> for VecUtxo {
 impl From<VecUtxo> for CmlUTxOs {
     fn from(value: VecUtxo) -> Self {
         Into::<CArray<CmlUTxO>>::into(value.iter().map(|utxo| utxo.clone()).collect::<Vec<_>>())
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct MempoolUtxos {
+    spent_inputs: CArray<CmlUTxO>,
+    created_utxos: CArray<CmlUTxO>,
+}
+
+impl MempoolUtxos {
+    fn from_tx(tx: &Transaction) -> Self {
+        let body = tx.body.clone();
+        let tx_hash: CData = body.hash().to_raw_bytes().into();
+        let inputs = body.inputs;
+        let outputs = body.outputs;
+
+        Self {
+            spent_inputs: inputs
+                .iter()
+                .map(|input| CmlUTxO {
+                    tx_hash: input.transaction_id.to_raw_bytes().into(),
+                    tx_index: input.index,
+                    orig_output: COption::None,
+                })
+                .collect::<Vec<_>>()
+                .into(),
+
+            created_utxos: outputs
+                .iter()
+                .enumerate()
+                .map(|(idx, output)| CmlUTxO {
+                    tx_hash,
+                    tx_index: idx as u64,
+                    orig_output: Option::Some(output.clone().into()).into(),
+                })
+                .collect::<Vec<_>>()
+                .into(),
+        }
     }
 }
