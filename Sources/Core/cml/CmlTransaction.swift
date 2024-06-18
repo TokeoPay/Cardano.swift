@@ -299,8 +299,8 @@ extension CCardano.TxDetails {
 }
 
 public struct SwiftMempoolUtxos: Codable {
-    let spent_inputs: Array<UTxO>
-    let created_utxos: Array<UTxO>
+    public let spent_inputs: Array<UTxO>
+    public let created_utxos: Array<UTxO>
     
     init(spent_inputs: Array<UTxO>, created_utxos: Array<UTxO>) {
         self.spent_inputs = spent_inputs
