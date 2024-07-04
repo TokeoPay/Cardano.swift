@@ -445,11 +445,15 @@ pub unsafe extern "C" fn cml_tx_add_signers(
         let tx = Transaction::from_bytes(tx_bytes.to_vec())
             .map_err(|_| CError::Error("Tx Build Error".into_cstr()))?;
 
-        let tx_witness_set: TransactionWitnessSet =
+        let mut tx_witness_set = tx.witness_set.clone();
+
+        let tx_witness_to_add: TransactionWitnessSet =
             Deserialize::from_cbor_bytes(tx_witness_set_bytes).map_err(|err| {
                 println!("{:?}", err);
                 CError::Error("Tx Build Error - Bad Witness Set".into_cstr())
             })?;
+
+        tx_witness_set.add_all_witnesses(tx_witness_to_add);
 
         let new_tx = Transaction::new(tx.body, tx_witness_set, true, tx.auxiliary_data);
 
