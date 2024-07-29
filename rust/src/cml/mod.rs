@@ -21,7 +21,7 @@ pub struct CmlAsset {
     policy: CData,
     name: CData,
     #[allow(dead_code)]
-    qty: u64,
+    qty: i64,
 }
 
 pub type CmlAssets = CArray<CmlAsset>;
@@ -141,6 +141,7 @@ pub struct TxDetails {
     //
     sum_outputs: CmlTxSummaries,
     sum_inputs: CmlTxSummaries,
+    mints: COption<CmlAssets>,
 }
 
 impl Free for TxDetails {

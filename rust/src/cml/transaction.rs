@@ -16,7 +16,7 @@ use crate::{data::CData, option::COption, string::IntoCString};
 #[allow(unused_imports)]
 use blake2::{Blake2b, Digest};
 use cml_chain::address::{Address, RewardAddress};
-use cml_chain::assets::{MultiAsset, Value as CML_Value};
+use cml_chain::assets::{Mint, MultiAsset, Value as CML_Value};
 use cml_chain::builders::tx_builder::TransactionUnspentOutput;
 use cml_chain::builders::witness_builder::TransactionWitnessSetBuilder;
 use cml_chain::crypto::utils::make_vkey_witness;
@@ -67,7 +67,7 @@ impl From<MultiAsset> for CmlAssets {
                     fingerprint: a.to_bech32_str().into_cstr(),
                     name: asset_name.get().clone().into(),
                     policy: policy_id.to_raw_bytes().into(),
-                    qty: amount.clone(),
+                    qty: amount.clone() as i64,
                 });
             });
         });
@@ -128,6 +128,7 @@ impl From<TransactionUnspentOutput> for CmlUTxO {
 impl From<Transaction> for TxDetails {
     fn from(value: Transaction) -> Self {
         let body = value.body;
+        let mints = body.mint.clone();
         let inputs = body.inputs.clone();
         let fee = body.fee;
         let collateral = body.collateral_inputs.clone();
@@ -165,6 +166,7 @@ impl From<Transaction> for TxDetails {
         //        });
 
         // let x: Vec<TxSummarised> = outputs
+
         let sum_outputs = outputs
             .to_vec()
             .iter()
@@ -319,6 +321,37 @@ impl From<Transaction> for TxDetails {
             .map(|s| hex::decode(s).unwrap_or_default())
             .collect();
 
+        let mut my_mints: COption<CmlAssets> = COption::None;
+
+        if let Some(mints) = mints {
+            let a: CmlAssets = mints
+                .iter()
+                .flat_map(|(policy_id, assets)| {
+                    assets
+                        .iter()
+                        .map(|(asset_name, amount)| {
+                            let a = AssetName {
+                                policy_id: &policy_id.to_raw_bytes().to_vec(),
+                                asset_name: asset_name.get(),
+                            };
+
+                            CmlAsset {
+                                fingerprint: a.to_bech32_str().into_cstr(),
+                                name: asset_name.get().clone().into(),
+                                policy: policy_id.to_raw_bytes().into(),
+                                qty: amount.clone(),
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>()
+                .into();
+
+            my_mints = COption::Some(a);
+        }
+
+        // let mints: Option<CmlAssets> =
+
         Self {
             inputs: tx_input_utxos.clone().into(),
             fee,
@@ -333,6 +366,7 @@ impl From<Transaction> for TxDetails {
             hash: hash.to_raw_bytes().into(),
             sum_inputs: sum_inputs.into(),
             sum_outputs: sum_outputs.into(),
+            mints: my_mints,
         }
     }
 }

@@ -8,14 +8,13 @@
 import Foundation
 import CCardano
 
-
 /* MARK: TxDetails */
 
 public struct CmlAsset: Codable {
     public let fingerprint: String
     public let policy: Data
     public let name: Data
-    public let qty: UInt64
+    public let qty: Int64
     
     init(asset: CCardano.CmlAsset) {
         fingerprint = asset.fingerprint.copied()
@@ -122,6 +121,18 @@ extension COption_CmlTxOutput: COption {
     
     func noneTag() -> Tag {
         None_CmlTxOutput
+    }
+}
+
+extension COption_CmlAssets: COption {   
+    typealias Tag = COption_CmlAssets_Tag
+    typealias Value = CCardano.CmlAssets
+    
+    func someTag() -> COption_CmlAssets_Tag {
+        Some_CmlAssets
+    }
+    func noneTag() -> COption_CmlAssets_Tag {
+        None_CmlAssets
     }
 }
 
@@ -257,6 +268,7 @@ public struct SwiftTxDetails: Codable {
                //
     public let sum_outputs: [TxSummaries]
     public let sum_inputs: [TxSummaries]
+    public let mints: [CmlAsset]?
     
     init(txDetails: CCardano.TxDetails) {
         fee = txDetails.fee
@@ -268,6 +280,7 @@ public struct SwiftTxDetails: Codable {
         outputs = txDetails.outputs.copied().map { $0.copied() }
         sum_outputs = txDetails.sum_outputs.copied().map { $0.copied() }
         sum_inputs = txDetails.sum_inputs.copied().map { $0.copied() }
+        mints = txDetails.mints.get()?.copied().map{ $0.copied() }
     }
     
     public init(transaction: Data) throws {
