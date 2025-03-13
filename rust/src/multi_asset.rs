@@ -24,9 +24,9 @@ impl Free for PolicyID {
 }
 
 impl TryFrom<COption<MultiAsset>> for AssetBundle<u64> {
-  type Error = CError;
-  
-  fn try_from(_value: COption<MultiAsset>) -> std::prelude::v1::Result<Self, Self::Error> {
+    type Error = CError;
+
+    fn try_from(_value: COption<MultiAsset>) -> std::prelude::v1::Result<Self, Self::Error> {
         todo!()
     }
 }
@@ -34,15 +34,17 @@ impl TryFrom<COption<MultiAsset>> for AssetBundle<u64> {
 impl TryFrom<AssetBundle<u64>> for MultiAsset {
     type Error = CError;
     fn try_from(assets: AssetBundle<u64>) -> Result<Self> {
-        assets.iter().map(|(policy, assets)| {
-            TryInto::<Assets>::try_into(assets.clone()).zip(
-                TryInto::<ScriptHash>::try_into(policy.clone())
-            ).and_then(|(assets, policy)| {
-                Ok( Into::<MultiAssetKeyValue>::into((policy, assets)) )
+        assets
+            .iter()
+            .map(|(policy, assets)| {
+                TryInto::<Assets>::try_into(assets.clone())
+                    .zip(TryInto::<ScriptHash>::try_into(policy.clone()))
+                    .and_then(|(assets, policy)| {
+                        Ok(Into::<MultiAssetKeyValue>::into((policy, assets)))
+                    })
             })
-        }).collect::<Result<Vec<_>>>().map(|ma| {
-            From::<MultiAsset>::from(ma.clone().into())
-        })
+            .collect::<Result<Vec<_>>>()
+            .map(|ma| From::<MultiAsset>::from(ma.clone().into()))
     }
 }
 
@@ -59,22 +61,25 @@ impl TryFrom<MultiAsset> for AssetBundle<u64> {
                 let assets_map = unsafe { assets.as_btree_map() }.into_result();
 
                 let cml_assets: Result<Vec<(CML_AssetName, u64)>> = assets_map.and_then(|x| {
-                    let res = (x.iter()
+                    let res = (x
+                        .iter()
                         .map(|(asset_name, value)| {
-                            
-                            let bbb: Result<(CML_AssetName, u64)> = CML_AssetName::new(asset_name.bytes())
-                                .map_err(|_e| CError::Error("".into_cstr()))
-                                .and_then(|cml_asset_name| Ok((cml_asset_name, value.clone())));
+                            let bbb: Result<(CML_AssetName, u64)> =
+                                CML_AssetName::new(asset_name.bytes())
+                                    .map_err(|_e| CError::Error("".into_cstr()))
+                                    .and_then(|cml_asset_name| Ok((cml_asset_name, value.clone())));
                             return bbb;
-                            
                         })
-                        .collect::<Result<Vec<_>>>()
-                      ).unwrap_or(Vec::new());
-                    
+                        .collect::<Result<Vec<_>>>())
+                    .unwrap_or(Vec::new());
+
                     Ok(res)
                 }); //;
 
-                multi_assets.insert(policy_id, OrderedHashMap::from_iter(cml_assets.unwrap_or(Vec::new())));
+                multi_assets.insert(
+                    policy_id,
+                    OrderedHashMap::from_iter(cml_assets.unwrap_or(Vec::new())),
+                );
             })
         });
 

@@ -12,6 +12,9 @@ use crate::panic::*;
 use crate::ptr::*;
 use crate::string::*;
 use cardano_serialization_lib::address::Address as RAddress;
+use cml_chain::address::BaseAddress as CMLBaseAddress;
+use cml_chain::certs::StakeCredential as CMLStakeCredential;
+use cml_core::serialization::FromBytes;
 use std::convert::{TryFrom, TryInto};
 
 #[repr(C)]
@@ -71,8 +74,7 @@ pub enum AddressMatch {
 }
 
 impl Free for AddressMatch {
-  unsafe fn free(&mut self) {
-  }
+    unsafe fn free(&mut self) {}
 }
 
 #[no_mangle]
@@ -97,10 +99,10 @@ pub unsafe extern "C" fn cardano_address_match_pkh(
                 .into_iter()
                 .any(|pkh| StakeCredential::Key(pkh.clone()).eq(&cred))
             {
-              return match key_type {
+                return match key_type {
                     "REWARD" => Ok(AddressMatch::StakeKeyMatch()),
                     _ => Ok(AddressMatch::PaymentKeyMatch()),
-                }
+                };
             }
 
             return Ok(AddressMatch::NoMatch());
@@ -112,7 +114,6 @@ pub unsafe extern "C" fn cardano_address_match_pkh(
         }
     })
     .response(is_match, error)
-
 }
 
 #[no_mangle]
@@ -140,6 +141,35 @@ pub unsafe extern "C" fn cardano_address_from_bytes(
             .unowned()
             .and_then(|bytes| RAddress::from_bytes(bytes.into()).into_result())
             .and_then(|addr| addr.try_into())
+    })
+    .response(address, error)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn cardano_address_from_parts_to_bech32(
+    network: u8,
+    payment_bytes: CData,
+    staking_bytes: CData,
+    address: &mut CharPtr,
+    error: &mut CError,
+) -> bool {
+    handle_exception_result(|| {
+        payment_bytes.unowned()
+            .zip(staking_bytes.unowned())
+            .and_then(|(payment_bytes, staking_bytes)| {
+                let payment_cred = CMLStakeCredential::from_bytes(payment_bytes.into())
+                    .map_err(|e| CError::DeserializeError(e.to_string().into_cstr()))?;
+                let staking_cred = CMLStakeCredential::from_bytes(staking_bytes.into())
+                    .map_err(|e| CError::DeserializeError(e.to_string().into_cstr()))?;
+
+                let base_address = CMLBaseAddress::new(network, payment_cred, staking_cred);
+
+                base_address
+                    .to_address()
+                    .to_bech32(None)
+                    .map_err(|e| CError::DeserializeError(e.to_string().into_cstr()))
+            })
+            .and_then(|addr| Ok(addr.into_cstr()))
     })
     .response(address, error)
 }

@@ -1,6 +1,6 @@
 [package]
 name = "cardano-c-bindings"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Tesseract Systems, Inc. <info@tesseract.one>"]
 license = "Apache-2.0"
 description = "Cardano bindings for C."
@@ -18,10 +18,10 @@ num-bigint = "0.4.0"
 cardano-message-signing = "1.0.1"
 getrandom = "0.2.14"
 hex = "0.4.3"
-cardano-multiplatform-lib = { version = "5.3.1" }
-cml-core = "5.3.1"
-cml-chain = "5.3.1"
-cml-crypto = "5.3.1"
+cardano-multiplatform-lib = { version = "6.0.1" }
+cml-core = "6.0.1"
+cml-chain = "6.0.1"
+cml-crypto = "6.0.1"
 blockfrost = "1.0.1"
 bech32 = "0.11.0"
 blake2 = "0.10.6"
@@ -41,7 +41,7 @@ reqwest = { version = "0.12.4", features = ["json", "blocking", "native-tls-vend
 # cardano-serialization-lib = { path="./target/patch/cardano-serialization-lib-10.2.0" }
 
 [build-dependencies]
-cbindgen = "0.26.0"
+cbindgen = "0.27.0"
 
 [lib]
 name = "cardano"

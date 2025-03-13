@@ -25,7 +25,6 @@ impl Free for Ed25519KeyHash {
     unsafe fn free(&mut self) {}
 }
 
-
 impl TryFrom<REd25519KeyHash> for Ed25519KeyHash {
     type Error = CError;
 
@@ -83,7 +82,6 @@ pub struct ScriptHash {
     bytes: [u8; 28],
     len: u8,
 }
-
 
 impl TryFrom<CML_ScriptHash> for ScriptHash {
     type Error = CError;

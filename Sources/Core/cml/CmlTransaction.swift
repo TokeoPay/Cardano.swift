@@ -56,6 +56,56 @@ extension CCardano.CmlAsset: CPtr {
     }
 }
 
+public struct CmlAssetPair: Codable {
+    public let policy: Data
+    public let asset_name: Data
+    public let amount: UInt64;
+    
+    func withCAssetPair<T>(fn: @escaping (AssetPair) throws -> T ) rethrows -> T {
+        try policy.withCData { policy in
+            
+            try asset_name.withCData { asset_name in
+                try fn(
+                    AssetPair(policy: policy, asset_name: asset_name, amount: amount)
+                )
+            }
+            
+        }
+    }
+    
+}
+
+typealias CmlAssetPairs = Array<CmlAssetPair>
+
+extension CCardano.CArray_AssetPair: CArray {
+    typealias CElement = CCardano.AssetPair
+    typealias Val = [CCardano.AssetPair]
+    
+    mutating func free() {
+        //TODO: Impl Free for this type!
+    }
+}
+
+extension CmlAssetPairs {
+    func withCArray<T>(fn: @escaping (CCardano.CArray_AssetPair) throws -> T) rethrows -> T {
+        try self.withCArray(with: { try $0.withCAssetPair(fn: $1)}, fn: fn)
+    }
+}
+
+
+
+extension CCardano.AssetPair: CPtr {
+    typealias Val = CmlAssetPair
+    
+    func copied() -> CmlAssetPair {
+        
+    }
+    
+    mutating func free() {
+        
+    }
+}
+
 public typealias CmlAssets = Array<CmlAsset>
 
 extension CCardano.CmlAssets: CArray {
@@ -136,6 +186,18 @@ extension COption_CmlAssets: COption {
     }
 }
 
+extension COption_CData: COption {
+    typealias Tag = COption_CData_Tag
+    typealias Value = CCardano.CData
+    
+    func someTag() -> COption_CData_Tag {
+        Some_CData
+    }
+    func noneTag() -> COption_CData_Tag {
+        None_CData
+    }
+}
+
 public struct UTxO: Codable {
     public let tx_hash: Data
     public let tx_index: UInt64
@@ -159,7 +221,23 @@ public struct UTxO: Codable {
         self.init(utxo: cmlUtxo)
     }
     
-    public func getMinAdaForUtxo() throws -> Int64 {
+    public init(tx_hash: String, tx_index: UInt64, address: String, lovelace: UInt64, assets: Array<CmlAssetPair>, datum: Optional<Data>) throws {
+        let cmlUtxo = try tx_hash.withCString { tx_hash in
+            try address.withCString { address in
+                try assets.withCArray { assets in
+                    try datum.withCOption(with: {try $0.withCData(fn: $1) }) { datum in
+                        RustResult<CCardano.CmlUTxO>.wrap { result, error in
+                            into_utxo(tx_hash, tx_index, address, lovelace, assets, datum, result, error)
+                        }
+                    }
+                }
+            }
+        }.get()
+        
+        self.init(utxo: cmlUtxo)
+    }
+    
+    public func getAvailableLovelace() throws -> Int64 {
         
         if let output = self.orig_output {
             let ll = try output.cbor.withCData { output in

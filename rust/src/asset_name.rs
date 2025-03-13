@@ -7,6 +7,7 @@ use super::ptr::*;
 use cardano_serialization_lib::AssetName as RAssetName;
 use cml_chain::assets::AssetName as CML_AssetName;
 use std::convert::{TryFrom, TryInto};
+use cml_core::serialization::Serialize;
 
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -16,9 +17,9 @@ pub struct AssetName {
 }
 
 impl AssetName {
-  pub fn bytes(&self) -> Vec<u8> {
-    self.bytes.into()
-  }
+    pub fn bytes(&self) -> Vec<u8> {
+        self.bytes.into()
+    }
 }
 
 impl Free for AssetName {
@@ -56,7 +57,7 @@ impl TryFrom<CML_AssetName> for AssetName {
     type Error = CError;
 
     fn try_from(value: CML_AssetName) -> Result<Self> {
-        let mut name = value.get().clone();
+        let mut name = value.to_cbor_bytes().clone();
         let len = name.len();
         if len < 32 {
             name.append(&mut vec![0; 32 - len]);
@@ -65,7 +66,7 @@ impl TryFrom<CML_AssetName> for AssetName {
 
         Ok(Self {
             bytes: bytes.clone(),
-            len: len as u8
+            len: len as u8,
         })
     }
 }

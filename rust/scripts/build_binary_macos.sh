@@ -23,10 +23,10 @@ export IPHONEOS_DEPLOYMENT_TARGET=11
 readonly SDK_MAPPINGS=(
 	'ios-:iphoneos'
 	'ios-simulator:iphonesimulator'
-	'tvos-:appletvos'
-	'tvos-simulator:appletvsimulator'
-	'watchos-:watchos'
-	'watchos-simulator:watchsimulator'
+#	'tvos-:appletvos'
+#	'tvos-simulator:appletvsimulator'
+#	'watchos-:watchos'
+#	'watchos-simulator:watchsimulator'
 	'macos-:macosx'
 )
 
@@ -184,6 +184,7 @@ for BTARGET in ${BUILD_TARGETS[@]}; do
 	for target in "${targets[@]}"; do
 		echo "Building target: ${target}..."
 		echo "cargo build --lib $RELEASE --target $target"
+#		RUSTFLAGS="-Z threads=8" cargo +nightly build --lib $RELEASE --target $target
 		cargo build --lib $RELEASE --target $target
 		BUILT_LIBS="${BUILT_LIBS} ${RUST_TARGET_DIR}/${target}/${CONFIGURATION}/lib${LIB_NAME}.a"
 	done

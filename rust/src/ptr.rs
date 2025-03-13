@@ -1,17 +1,17 @@
 use super::panic::*;
 
 pub trait Free {
-  unsafe fn free(&mut self);
+    unsafe fn free(&mut self);
 }
 
 pub trait Ptr: Free {
-  type PT: ?Sized;
+    type PT: ?Sized;
 
-  unsafe fn unowned(&self) -> Result<&Self::PT>;
+    unsafe fn unowned(&self) -> Result<&Self::PT>;
 }
 
 impl Free for u64 {
-  unsafe fn free(&mut self) {}
+    unsafe fn free(&mut self) {}
 }
 
 // pub trait SizedPtr: Sized {

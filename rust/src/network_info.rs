@@ -1,30 +1,33 @@
-use cardano_serialization_lib::address::{NetworkInfo as RNetworkInfo};
+use cardano_serialization_lib::address::NetworkInfo as RNetworkInfo;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct NetworkInfo {
-  network_id: u8,
-  protocol_magic: u32,
+    network_id: u8,
+    protocol_magic: u32,
 }
 
 impl From<RNetworkInfo> for NetworkInfo {
-  fn from(info: RNetworkInfo) -> Self {
-    Self { network_id: info.network_id(), protocol_magic: info.protocol_magic() }
-  }
+    fn from(info: RNetworkInfo) -> Self {
+        Self {
+            network_id: info.network_id(),
+            protocol_magic: info.protocol_magic(),
+        }
+    }
 }
 
 impl From<NetworkInfo> for RNetworkInfo {
-  fn from(info: NetworkInfo) -> Self {
-    Self::new(info.network_id, info.protocol_magic)
-  }
+    fn from(info: NetworkInfo) -> Self {
+        Self::new(info.network_id, info.protocol_magic)
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_network_info_mainnet() -> NetworkInfo {
-  RNetworkInfo::mainnet().into()
+    RNetworkInfo::mainnet().into()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_network_info_testnet() -> NetworkInfo {
-  RNetworkInfo::testnet().into()
+    RNetworkInfo::testnet().into()
 }

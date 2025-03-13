@@ -36,7 +36,9 @@ impl TransactionOutputBuilder {
 
     pub fn next(&self) -> Result<TransactionOutputAmountBuilder, JsError> {
         Ok(TransactionOutputAmountBuilder {
-            address: self.address.clone().ok_or(JsError::from_str("TransactionOutputBaseBuilder: Address missing"))?,
+            address: self.address.clone().ok_or(JsError::from_str(
+                "TransactionOutputBaseBuilder: Address missing",
+            ))?,
             amount: None,
             data_hash: self.data_hash.clone(),
         })
@@ -53,7 +55,6 @@ pub struct TransactionOutputAmountBuilder {
 
 #[wasm_bindgen]
 impl TransactionOutputAmountBuilder {
-
     pub fn with_value(&self, amount: &Value) -> Self {
         let mut cfg = self.clone();
         cfg.amount = Some(amount.clone());
@@ -76,15 +77,16 @@ impl TransactionOutputAmountBuilder {
         cfg
     }
 
-    pub fn with_asset_and_min_required_coin(&self, multiasset: &MultiAsset, coins_per_utxo_word: &Coin) -> Result<TransactionOutputAmountBuilder, JsError> {
+    pub fn with_asset_and_min_required_coin(
+        &self,
+        multiasset: &MultiAsset,
+        coins_per_utxo_word: &Coin,
+    ) -> Result<TransactionOutputAmountBuilder, JsError> {
         let min_possible_coin = min_pure_ada(&coins_per_utxo_word, self.data_hash.is_some())?;
         let mut value = Value::new(&min_possible_coin);
         value.set_multiasset(multiasset);
-        let required_coin = min_ada_required(
-            &value,
-            self.data_hash.is_some(),
-            &coins_per_utxo_word,
-        )?;
+        let required_coin =
+            min_ada_required(&value, self.data_hash.is_some(), &coins_per_utxo_word)?;
 
         Ok(self.with_coin_and_asset(&required_coin, &multiasset))
     }
@@ -92,7 +94,9 @@ impl TransactionOutputAmountBuilder {
     pub fn build(&self) -> Result<TransactionOutput, JsError> {
         Ok(TransactionOutput {
             address: self.address.clone(),
-            amount: self.amount.clone().ok_or(JsError::from_str("TransactionOutputAmountBuilder: amount missing"))?,
+            amount: self.amount.clone().ok_or(JsError::from_str(
+                "TransactionOutputAmountBuilder: amount missing",
+            ))?,
             data_hash: self.data_hash.clone(),
         })
     }

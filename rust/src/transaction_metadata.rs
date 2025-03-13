@@ -10,386 +10,396 @@ use crate::stake_credential::Ed25519KeyHash;
 use crate::stake_credential::ScriptHash;
 use cardano_serialization_lib::utils::to_bignum;
 use cardano_serialization_lib::{
-  metadata::AuxiliaryData as RAuxiliaryData,
-  plutus::{PlutusScript as RPlutusScript, PlutusScripts as RPlutusScripts},
-  NativeScript as RNativeScript, NativeScriptKind, NativeScripts as RNativeScripts,
-  ScriptAll as RScriptAll, ScriptAny as RScriptAny, ScriptHashNamespace as RScriptHashNamespace,
-  ScriptNOfK as RScriptNOfK, ScriptPubkey as RScriptPubkey, TimelockExpiry as RTimelockExpiry,
-  TimelockStart as RTimelockStart,
+    metadata::AuxiliaryData as RAuxiliaryData,
+    plutus::{PlutusScript as RPlutusScript, PlutusScripts as RPlutusScripts},
+    NativeScript as RNativeScript, NativeScriptKind, NativeScripts as RNativeScripts,
+    ScriptAll as RScriptAll, ScriptAny as RScriptAny, ScriptHashNamespace as RScriptHashNamespace,
+    ScriptNOfK as RScriptNOfK, ScriptPubkey as RScriptPubkey, TimelockExpiry as RTimelockExpiry,
+    TimelockStart as RTimelockStart,
 };
 use std::convert::{TryFrom, TryInto};
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub enum ScriptHashNamespace {
-  NativeScriptKind,
+    NativeScriptKind,
 }
 
 impl From<ScriptHashNamespace> for RScriptHashNamespace {
-  fn from(script_hash_namespace: ScriptHashNamespace) -> Self {
-    match script_hash_namespace {
-      ScriptHashNamespace::NativeScriptKind => Self::NativeScript,
+    fn from(script_hash_namespace: ScriptHashNamespace) -> Self {
+        match script_hash_namespace {
+            ScriptHashNamespace::NativeScriptKind => Self::NativeScript,
+        }
     }
-  }
 }
 
 impl From<RScriptHashNamespace> for ScriptHashNamespace {
-  fn from(script_hash_namespace: RScriptHashNamespace) -> Self {
-    match script_hash_namespace {
-      RScriptHashNamespace::NativeScript => Self::NativeScriptKind,
-        RScriptHashNamespace::PlutusScript => todo!(),
+    fn from(script_hash_namespace: RScriptHashNamespace) -> Self {
+        match script_hash_namespace {
+            RScriptHashNamespace::NativeScript => Self::NativeScriptKind,
+            RScriptHashNamespace::PlutusScript => todo!(),
+        }
     }
-  }
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub enum NativeScript {
-  ScriptPubkeyKind(ScriptPubkey),
-  ScriptAllKind(ScriptAll),
-  ScriptAnyKind(ScriptAny),
-  ScriptNOfKKind(ScriptNOfK),
-  TimelockStartKind(TimelockStart),
-  TimelockExpiryKind(TimelockExpiry),
+    ScriptPubkeyKind(ScriptPubkey),
+    ScriptAllKind(ScriptAll),
+    ScriptAnyKind(ScriptAny),
+    ScriptNOfKKind(ScriptNOfK),
+    TimelockStartKind(TimelockStart),
+    TimelockExpiryKind(TimelockExpiry),
 }
 
 impl Free for NativeScript {
-  unsafe fn free(&mut self) {
-    match self {
-      NativeScript::ScriptAllKind(script_all) => script_all.free(),
-      NativeScript::ScriptAnyKind(script_any) => script_any.free(),
-      NativeScript::ScriptNOfKKind(script_n_of_k) => script_n_of_k.free(),
-      _ => return,
+    unsafe fn free(&mut self) {
+        match self {
+            NativeScript::ScriptAllKind(script_all) => script_all.free(),
+            NativeScript::ScriptAnyKind(script_any) => script_any.free(),
+            NativeScript::ScriptNOfKKind(script_n_of_k) => script_n_of_k.free(),
+            _ => return,
+        }
     }
-  }
 }
 
 impl TryFrom<NativeScript> for RNativeScript {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(native_script: NativeScript) -> Result<Self> {
-    match native_script {
-      NativeScript::ScriptPubkeyKind(script_pubkey) => {
-        Ok(Self::new_script_pubkey(&script_pubkey.into()))
-      }
-      NativeScript::ScriptAllKind(script_all) => script_all
-        .try_into()
-        .map(|script_all| Self::new_script_all(&script_all)),
-      NativeScript::ScriptAnyKind(script_any) => script_any
-        .try_into()
-        .map(|script_any| Self::new_script_any(&script_any)),
-      NativeScript::ScriptNOfKKind(script_n_of_k) => script_n_of_k
-        .try_into()
-        .map(|script_n_of_k| Self::new_script_n_of_k(&script_n_of_k)),
-      NativeScript::TimelockStartKind(timelock_start) => {
-        Ok(Self::new_timelock_start(&timelock_start.into()))
-      }
-      NativeScript::TimelockExpiryKind(timelock_expiry) => {
-        Ok(Self::new_timelock_expiry(&timelock_expiry.into()))
-      }
+    fn try_from(native_script: NativeScript) -> Result<Self> {
+        match native_script {
+            NativeScript::ScriptPubkeyKind(script_pubkey) => {
+                Ok(Self::new_script_pubkey(&script_pubkey.into()))
+            }
+            NativeScript::ScriptAllKind(script_all) => script_all
+                .try_into()
+                .map(|script_all| Self::new_script_all(&script_all)),
+            NativeScript::ScriptAnyKind(script_any) => script_any
+                .try_into()
+                .map(|script_any| Self::new_script_any(&script_any)),
+            NativeScript::ScriptNOfKKind(script_n_of_k) => script_n_of_k
+                .try_into()
+                .map(|script_n_of_k| Self::new_script_n_of_k(&script_n_of_k)),
+            NativeScript::TimelockStartKind(timelock_start) => {
+                Ok(Self::new_timelock_start(&timelock_start.into()))
+            }
+            NativeScript::TimelockExpiryKind(timelock_expiry) => {
+                Ok(Self::new_timelock_expiry(&timelock_expiry.into()))
+            }
+        }
     }
-  }
 }
 
 impl TryFrom<RNativeScript> for NativeScript {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(native_script: RNativeScript) -> Result<Self> {
-    match native_script.kind() {
-      NativeScriptKind::ScriptPubkey => native_script
-        .as_script_pubkey()
-        .ok_or("Empty ScriptPubkey".into())
-        .and_then(|script_pubkey| script_pubkey.try_into())
-        .map(|script_pubkey| Self::ScriptPubkeyKind(script_pubkey)),
-      NativeScriptKind::ScriptAll => native_script
-        .as_script_all()
-        .ok_or("Empty ScriptAll".into())
-        .and_then(|script_all| script_all.try_into())
-        .map(|script_all| Self::ScriptAllKind(script_all)),
-      NativeScriptKind::ScriptAny => native_script
-        .as_script_any()
-        .ok_or("Empty ScriptAny".into())
-        .and_then(|script_any| script_any.try_into())
-        .map(|script_any| Self::ScriptAnyKind(script_any)),
-      NativeScriptKind::ScriptNOfK => native_script
-        .as_script_n_of_k()
-        .ok_or("Empty ScriptNOfK".into())
-        .and_then(|script_n_of_k| script_n_of_k.try_into())
-        .map(|script_n_of_k| Self::ScriptNOfKKind(script_n_of_k)),
-      NativeScriptKind::TimelockStart => native_script
-        .as_timelock_start()
-        .ok_or("Empty TimelockStart".into())
-        .map(|timelock_start| Self::TimelockStartKind(timelock_start.into())),
-      NativeScriptKind::TimelockExpiry => native_script
-        .as_timelock_expiry()
-        .ok_or("Empty TimelockExpiry".into())
-        .map(|timelock_expiry| Self::TimelockExpiryKind(timelock_expiry.into())),
+    fn try_from(native_script: RNativeScript) -> Result<Self> {
+        match native_script.kind() {
+            NativeScriptKind::ScriptPubkey => native_script
+                .as_script_pubkey()
+                .ok_or("Empty ScriptPubkey".into())
+                .and_then(|script_pubkey| script_pubkey.try_into())
+                .map(|script_pubkey| Self::ScriptPubkeyKind(script_pubkey)),
+            NativeScriptKind::ScriptAll => native_script
+                .as_script_all()
+                .ok_or("Empty ScriptAll".into())
+                .and_then(|script_all| script_all.try_into())
+                .map(|script_all| Self::ScriptAllKind(script_all)),
+            NativeScriptKind::ScriptAny => native_script
+                .as_script_any()
+                .ok_or("Empty ScriptAny".into())
+                .and_then(|script_any| script_any.try_into())
+                .map(|script_any| Self::ScriptAnyKind(script_any)),
+            NativeScriptKind::ScriptNOfK => native_script
+                .as_script_n_of_k()
+                .ok_or("Empty ScriptNOfK".into())
+                .and_then(|script_n_of_k| script_n_of_k.try_into())
+                .map(|script_n_of_k| Self::ScriptNOfKKind(script_n_of_k)),
+            NativeScriptKind::TimelockStart => native_script
+                .as_timelock_start()
+                .ok_or("Empty TimelockStart".into())
+                .map(|timelock_start| Self::TimelockStartKind(timelock_start.into())),
+            NativeScriptKind::TimelockExpiry => native_script
+                .as_timelock_expiry()
+                .ok_or("Empty TimelockExpiry".into())
+                .map(|timelock_expiry| Self::TimelockExpiryKind(timelock_expiry.into())),
+        }
     }
-  }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_native_script_hash(
-  native_script: NativeScript, _namespace: ScriptHashNamespace, result: &mut ScriptHash,
-  error: &mut CError,
+    native_script: NativeScript,
+    _namespace: ScriptHashNamespace,
+    result: &mut ScriptHash,
+    error: &mut CError,
 ) -> bool {
-  handle_exception_result(|| {
-    native_script
-      .try_into()
-      .map(|native_script: RNativeScript| native_script.hash())
-      .and_then(|key_hash| key_hash.try_into())
-  })
-  .response(result, error)
+    handle_exception_result(|| {
+        native_script
+            .try_into()
+            .map(|native_script: RNativeScript| native_script.hash())
+            .and_then(|key_hash| key_hash.try_into())
+    })
+    .response(result, error)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_native_script_clone(
-  native_script: NativeScript, result: &mut NativeScript, error: &mut CError,
+    native_script: NativeScript,
+    result: &mut NativeScript,
+    error: &mut CError,
 ) -> bool {
-  handle_exception(|| native_script.clone()).response(result, error)
+    handle_exception(|| native_script.clone()).response(result, error)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_native_script_free(native_script: &mut NativeScript) {
-  native_script.free()
+    native_script.free()
 }
 
 pub type NativeScripts = CArray<NativeScript>;
 
 impl TryFrom<NativeScripts> for RNativeScripts {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(native_scripts: NativeScripts) -> Result<Self> {
-    let vec = unsafe { native_scripts.unowned()? };
-    let mut native_scripts = Self::new();
-    for native_script in vec.to_vec() {
-      let native_script = native_script.try_into()?;
-      native_scripts.add(&native_script);
+    fn try_from(native_scripts: NativeScripts) -> Result<Self> {
+        let vec = unsafe { native_scripts.unowned()? };
+        let mut native_scripts = Self::new();
+        for native_script in vec.to_vec() {
+            let native_script = native_script.try_into()?;
+            native_scripts.add(&native_script);
+        }
+        Ok(native_scripts)
     }
-    Ok(native_scripts)
-  }
 }
 
 impl TryFrom<RNativeScripts> for NativeScripts {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(native_scripts: RNativeScripts) -> Result<Self> {
-    (0..native_scripts.len())
-      .map(|index| native_scripts.get(index))
-      .map(|native_script| native_script.try_into())
-      .collect::<Result<Vec<NativeScript>>>()
-      .map(|native_scripts| native_scripts.into())
-  }
+    fn try_from(native_scripts: RNativeScripts) -> Result<Self> {
+        (0..native_scripts.len())
+            .map(|index| native_scripts.get(index))
+            .map(|native_script| native_script.try_into())
+            .collect::<Result<Vec<NativeScript>>>()
+            .map(|native_scripts| native_scripts.into())
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_native_scripts_free(native_scripts: &mut NativeScripts) {
-  native_scripts.free()
+    native_scripts.free()
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ScriptPubkey {
-  addr_keyhash: Ed25519KeyHash,
+    addr_keyhash: Ed25519KeyHash,
 }
 
 impl From<ScriptPubkey> for RScriptPubkey {
-  fn from(script_pubkey: ScriptPubkey) -> Self {
-    Self::new(&script_pubkey.addr_keyhash.into())
-  }
+    fn from(script_pubkey: ScriptPubkey) -> Self {
+        Self::new(&script_pubkey.addr_keyhash.into())
+    }
 }
 
 impl TryFrom<RScriptPubkey> for ScriptPubkey {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(script_pubkey: RScriptPubkey) -> Result<Self> {
-    script_pubkey
-      .addr_keyhash()
-      .try_into()
-      .map(|addr_keyhash| Self { addr_keyhash })
-  }
+    fn try_from(script_pubkey: RScriptPubkey) -> Result<Self> {
+        script_pubkey
+            .addr_keyhash()
+            .try_into()
+            .map(|addr_keyhash| Self { addr_keyhash })
+    }
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ScriptAll {
-  native_scripts: NativeScripts,
+    native_scripts: NativeScripts,
 }
 
 impl Free for ScriptAll {
-  unsafe fn free(&mut self) {
-    self.native_scripts.free()
-  }
+    unsafe fn free(&mut self) {
+        self.native_scripts.free()
+    }
 }
 
 impl TryFrom<ScriptAll> for RScriptAll {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(script_all: ScriptAll) -> Result<Self> {
-    script_all
-      .native_scripts
-      .try_into()
-      .map(|native_scripts| Self::new(&native_scripts))
-  }
+    fn try_from(script_all: ScriptAll) -> Result<Self> {
+        script_all
+            .native_scripts
+            .try_into()
+            .map(|native_scripts| Self::new(&native_scripts))
+    }
 }
 
 impl TryFrom<RScriptAll> for ScriptAll {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(script_all: RScriptAll) -> Result<Self> {
-    script_all
-      .native_scripts()
-      .try_into()
-      .map(|native_scripts| Self { native_scripts })
-  }
+    fn try_from(script_all: RScriptAll) -> Result<Self> {
+        script_all
+            .native_scripts()
+            .try_into()
+            .map(|native_scripts| Self { native_scripts })
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_script_all_clone(
-  script_all: ScriptAll, result: &mut ScriptAll, error: &mut CError,
+    script_all: ScriptAll,
+    result: &mut ScriptAll,
+    error: &mut CError,
 ) -> bool {
-  handle_exception(|| script_all.clone()).response(result, error)
+    handle_exception(|| script_all.clone()).response(result, error)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_script_all_free(script_all: &mut ScriptAll) {
-  script_all.free()
+    script_all.free()
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ScriptAny {
-  native_scripts: NativeScripts,
+    native_scripts: NativeScripts,
 }
 
 impl Free for ScriptAny {
-  unsafe fn free(&mut self) {
-    self.native_scripts.free()
-  }
+    unsafe fn free(&mut self) {
+        self.native_scripts.free()
+    }
 }
 
 impl TryFrom<ScriptAny> for RScriptAny {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(script_any: ScriptAny) -> Result<Self> {
-    script_any
-      .native_scripts
-      .try_into()
-      .map(|native_scripts| Self::new(&native_scripts))
-  }
+    fn try_from(script_any: ScriptAny) -> Result<Self> {
+        script_any
+            .native_scripts
+            .try_into()
+            .map(|native_scripts| Self::new(&native_scripts))
+    }
 }
 
 impl TryFrom<RScriptAny> for ScriptAny {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(script_any: RScriptAny) -> Result<Self> {
-    script_any
-      .native_scripts()
-      .try_into()
-      .map(|native_scripts| Self { native_scripts })
-  }
+    fn try_from(script_any: RScriptAny) -> Result<Self> {
+        script_any
+            .native_scripts()
+            .try_into()
+            .map(|native_scripts| Self { native_scripts })
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_script_any_clone(
-  script_any: ScriptAny, result: &mut ScriptAny, error: &mut CError,
+    script_any: ScriptAny,
+    result: &mut ScriptAny,
+    error: &mut CError,
 ) -> bool {
-  handle_exception(|| script_any.clone()).response(result, error)
+    handle_exception(|| script_any.clone()).response(result, error)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_script_any_free(script_any: &mut ScriptAny) {
-  script_any.free()
+    script_any.free()
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct ScriptNOfK {
-  n: u32,
-  native_scripts: NativeScripts,
+    n: u32,
+    native_scripts: NativeScripts,
 }
 
 impl Free for ScriptNOfK {
-  unsafe fn free(&mut self) {
-    self.native_scripts.free()
-  }
+    unsafe fn free(&mut self) {
+        self.native_scripts.free()
+    }
 }
 
 impl TryFrom<ScriptNOfK> for RScriptNOfK {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(script_n_of_k: ScriptNOfK) -> Result<Self> {
-    script_n_of_k
-      .native_scripts
-      .try_into()
-      .map(|native_scripts| Self::new(script_n_of_k.n, &native_scripts))
-  }
+    fn try_from(script_n_of_k: ScriptNOfK) -> Result<Self> {
+        script_n_of_k
+            .native_scripts
+            .try_into()
+            .map(|native_scripts| Self::new(script_n_of_k.n, &native_scripts))
+    }
 }
 
 impl TryFrom<RScriptNOfK> for ScriptNOfK {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(script_n_of_k: RScriptNOfK) -> Result<Self> {
-    script_n_of_k
-      .native_scripts()
-      .try_into()
-      .map(|native_scripts| Self {
-        n: script_n_of_k.n(),
-        native_scripts,
-      })
-  }
+    fn try_from(script_n_of_k: RScriptNOfK) -> Result<Self> {
+        script_n_of_k
+            .native_scripts()
+            .try_into()
+            .map(|native_scripts| Self {
+                n: script_n_of_k.n(),
+                native_scripts,
+            })
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_script_n_of_k_clone(
-  script_n_of_k: ScriptNOfK, result: &mut ScriptNOfK, error: &mut CError,
+    script_n_of_k: ScriptNOfK,
+    result: &mut ScriptNOfK,
+    error: &mut CError,
 ) -> bool {
-  handle_exception(|| script_n_of_k.clone()).response(result, error)
+    handle_exception(|| script_n_of_k.clone()).response(result, error)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_script_n_of_k_free(script_n_of_k: &mut ScriptNOfK) {
-  script_n_of_k.free()
+    script_n_of_k.free()
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct TimelockStart {
-  slot: SlotBigNum,
+    slot: SlotBigNum,
 }
 
 impl From<TimelockStart> for RTimelockStart {
-  fn from(timelock_start: TimelockStart) -> Self {
-    Self::new_timelockstart(& to_bignum(timelock_start.slot))
-  }
+    fn from(timelock_start: TimelockStart) -> Self {
+        Self::new_timelockstart(&to_bignum(timelock_start.slot))
+    }
 }
 
 impl From<RTimelockStart> for TimelockStart {
-  fn from(timelock_start: RTimelockStart) -> Self {
-    Self {
-      slot: timelock_start.slot_bignum().into(),
+    fn from(timelock_start: RTimelockStart) -> Self {
+        Self {
+            slot: timelock_start.slot_bignum().into(),
+        }
     }
-  }
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct TimelockExpiry {
-  slot: SlotBigNum,
+    slot: SlotBigNum,
 }
 
 impl From<TimelockExpiry> for RTimelockExpiry {
-  fn from(timelock_expiry: TimelockExpiry) -> Self {
-    Self::new_timelockexpiry(&to_bignum(timelock_expiry.slot))
-  }
+    fn from(timelock_expiry: TimelockExpiry) -> Self {
+        Self::new_timelockexpiry(&to_bignum(timelock_expiry.slot))
+    }
 }
 
 impl From<RTimelockExpiry> for TimelockExpiry {
-  fn from(timelock_expiry: RTimelockExpiry) -> Self {
-    Self {
-      slot: timelock_expiry.slot_bignum().into(),
+    fn from(timelock_expiry: RTimelockExpiry) -> Self {
+        Self {
+            slot: timelock_expiry.slot_bignum().into(),
+        }
     }
-  }
 }
 
 #[repr(C)]
@@ -397,181 +407,187 @@ impl From<RTimelockExpiry> for TimelockExpiry {
 pub struct PlutusScript(CData);
 
 impl Free for PlutusScript {
-  unsafe fn free(&mut self) {
-    self.0.free()
-  }
+    unsafe fn free(&mut self) {
+        self.0.free()
+    }
 }
 
 impl Clone for PlutusScript {
-  fn clone(&self) -> Self {
-    let bytes = unsafe { self.0.unowned().expect("Bad bytes pointer").into() };
-    Self(bytes)
-  }
+    fn clone(&self) -> Self {
+        let bytes = unsafe { self.0.unowned().expect("Bad bytes pointer").into() };
+        Self(bytes)
+    }
 }
 
 impl TryFrom<PlutusScript> for RPlutusScript {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(plutus_script: PlutusScript) -> Result<Self> {
-    let bytes = unsafe { plutus_script.0.unowned()? };
-    Ok(Self::new(bytes.to_vec()))
-  }
+    fn try_from(plutus_script: PlutusScript) -> Result<Self> {
+        let bytes = unsafe { plutus_script.0.unowned()? };
+        Ok(Self::new(bytes.to_vec()))
+    }
 }
 
 impl From<RPlutusScript> for PlutusScript {
-  fn from(plutus_script: RPlutusScript) -> Self {
-    Self(plutus_script.bytes().into())
-  }
+    fn from(plutus_script: RPlutusScript) -> Self {
+        Self(plutus_script.bytes().into())
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_plutus_script_clone(
-  plutus_script: PlutusScript, result: &mut PlutusScript, error: &mut CError,
+    plutus_script: PlutusScript,
+    result: &mut PlutusScript,
+    error: &mut CError,
 ) -> bool {
-  handle_exception(|| plutus_script.clone()).response(result, error)
+    handle_exception(|| plutus_script.clone()).response(result, error)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_plutus_script_free(plutus_script: &mut PlutusScript) {
-  plutus_script.free()
+    plutus_script.free()
 }
 
 pub type PlutusScripts = CArray<PlutusScript>;
 
 impl TryFrom<PlutusScripts> for RPlutusScripts {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(plutus_scripts: PlutusScripts) -> Result<Self> {
-    let vec = unsafe { plutus_scripts.unowned()? };
-    Ok(Self::new()).and_then(|mut plutus_scripts| {
-      vec
-        .iter()
-        .map(|&plutus_script| {
-          plutus_script
-            .try_into()
-            .map(|plutus_script| plutus_scripts.add(&plutus_script))
+    fn try_from(plutus_scripts: PlutusScripts) -> Result<Self> {
+        let vec = unsafe { plutus_scripts.unowned()? };
+        Ok(Self::new()).and_then(|mut plutus_scripts| {
+            vec.iter()
+                .map(|&plutus_script| {
+                    plutus_script
+                        .try_into()
+                        .map(|plutus_script| plutus_scripts.add(&plutus_script))
+                })
+                .collect::<Result<Vec<_>>>()
+                .map(|_| plutus_scripts)
         })
-        .collect::<Result<Vec<_>>>()
-        .map(|_| plutus_scripts)
-    })
-  }
+    }
 }
 
 impl From<RPlutusScripts> for PlutusScripts {
-  fn from(plutus_scripts: RPlutusScripts) -> Self {
-    (0..plutus_scripts.len())
-      .map(|index| plutus_scripts.get(index).into())
-      .collect::<Vec<PlutusScript>>()
-      .into()
-  }
+    fn from(plutus_scripts: RPlutusScripts) -> Self {
+        (0..plutus_scripts.len())
+            .map(|index| plutus_scripts.get(index).into())
+            .collect::<Vec<PlutusScript>>()
+            .into()
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_plutus_scripts_free(plutus_scripts: &mut PlutusScripts) {
-  plutus_scripts.free()
+    plutus_scripts.free()
 }
 
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct AuxiliaryData {
-  metadata: COption<GeneralTransactionMetadata>,
-  native_scripts: COption<NativeScripts>,
-  plutus_scripts: COption<PlutusScripts>,
+    metadata: COption<GeneralTransactionMetadata>,
+    native_scripts: COption<NativeScripts>,
+    plutus_scripts: COption<PlutusScripts>,
 }
 
 impl Free for AuxiliaryData {
-  unsafe fn free(&mut self) {
-    self.metadata.free();
-    self.native_scripts.free();
-    self.plutus_scripts.free();
-  }
+    unsafe fn free(&mut self) {
+        self.metadata.free();
+        self.native_scripts.free();
+        self.plutus_scripts.free();
+    }
 }
 
 impl TryFrom<AuxiliaryData> for RAuxiliaryData {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(auxiliary_data: AuxiliaryData) -> Result<Self> {
-    let metadata: Option<GeneralTransactionMetadata> = auxiliary_data.metadata.into();
-    metadata
-      .map(|metadata| metadata.try_into())
-      .transpose()
-      .zip({
-        let native_scripts: Option<NativeScripts> = auxiliary_data.native_scripts.into();
-        native_scripts.map(|ns| ns.try_into()).transpose()
-      })
-      .zip({
-        let plutus_scripts: Option<PlutusScripts> = auxiliary_data.plutus_scripts.into();
-        plutus_scripts.map(|ps| ps.try_into()).transpose()
-      })
-      .map(|((metadata, native_scripts), plutus_scripts)| {
-        let mut auxiliary_data = Self::new();
-        metadata.map(|metadata| auxiliary_data.set_metadata(&metadata));
-        native_scripts.map(|ns| auxiliary_data.set_native_scripts(&ns));
-        plutus_scripts.map(|ps| auxiliary_data.set_plutus_scripts(&ps));
-        auxiliary_data
-      })
-  }
+    fn try_from(auxiliary_data: AuxiliaryData) -> Result<Self> {
+        let metadata: Option<GeneralTransactionMetadata> = auxiliary_data.metadata.into();
+        metadata
+            .map(|metadata| metadata.try_into())
+            .transpose()
+            .zip({
+                let native_scripts: Option<NativeScripts> = auxiliary_data.native_scripts.into();
+                native_scripts.map(|ns| ns.try_into()).transpose()
+            })
+            .zip({
+                let plutus_scripts: Option<PlutusScripts> = auxiliary_data.plutus_scripts.into();
+                plutus_scripts.map(|ps| ps.try_into()).transpose()
+            })
+            .map(|((metadata, native_scripts), plutus_scripts)| {
+                let mut auxiliary_data = Self::new();
+                metadata.map(|metadata| auxiliary_data.set_metadata(&metadata));
+                native_scripts.map(|ns| auxiliary_data.set_native_scripts(&ns));
+                plutus_scripts.map(|ps| auxiliary_data.set_plutus_scripts(&ps));
+                auxiliary_data
+            })
+    }
 }
 
 impl TryFrom<RAuxiliaryData> for AuxiliaryData {
-  type Error = CError;
+    type Error = CError;
 
-  fn try_from(auxiliary_data: RAuxiliaryData) -> Result<Self> {
-    auxiliary_data
-      .metadata()
-      .map(|metadata| metadata.try_into())
-      .transpose()
-      .zip(
+    fn try_from(auxiliary_data: RAuxiliaryData) -> Result<Self> {
         auxiliary_data
-          .native_scripts()
-          .map(|native_scripts| native_scripts.try_into())
-          .transpose(),
-      )
-      .map(|(metadata, native_scripts)| Self {
-        metadata: metadata.into(),
-        native_scripts: native_scripts.into(),
-        plutus_scripts: auxiliary_data
-          .plutus_scripts()
-          .map(|plutus_scripts| plutus_scripts.into())
-          .into(),
-      })
-  }
+            .metadata()
+            .map(|metadata| metadata.try_into())
+            .transpose()
+            .zip(
+                auxiliary_data
+                    .native_scripts()
+                    .map(|native_scripts| native_scripts.try_into())
+                    .transpose(),
+            )
+            .map(|(metadata, native_scripts)| Self {
+                metadata: metadata.into(),
+                native_scripts: native_scripts.into(),
+                plutus_scripts: auxiliary_data
+                    .plutus_scripts()
+                    .map(|plutus_scripts| plutus_scripts.into())
+                    .into(),
+            })
+    }
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_auxiliary_data_to_bytes(
-  auxiliary_data: AuxiliaryData, result: &mut CData, error: &mut CError,
+    auxiliary_data: AuxiliaryData,
+    result: &mut CData,
+    error: &mut CError,
 ) -> bool {
-  handle_exception_result(|| {
-    auxiliary_data
-      .try_into()
-      .map(|auxiliary_data: RAuxiliaryData| auxiliary_data.to_bytes())
-      .map(|bytes| bytes.into())
-  })
-  .response(result, error)
+    handle_exception_result(|| {
+        auxiliary_data
+            .try_into()
+            .map(|auxiliary_data: RAuxiliaryData| auxiliary_data.to_bytes())
+            .map(|bytes| bytes.into())
+    })
+    .response(result, error)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_auxiliary_data_from_bytes(
-  data: CData, result: &mut AuxiliaryData, error: &mut CError,
+    data: CData,
+    result: &mut AuxiliaryData,
+    error: &mut CError,
 ) -> bool {
-  handle_exception_result(|| {
-    data
-      .unowned()
-      .and_then(|bytes| RAuxiliaryData::from_bytes(bytes.to_vec()).into_result())
-      .and_then(|auxiliary_data| auxiliary_data.try_into())
-  })
-  .response(result, error)
+    handle_exception_result(|| {
+        data.unowned()
+            .and_then(|bytes| RAuxiliaryData::from_bytes(bytes.to_vec()).into_result())
+            .and_then(|auxiliary_data| auxiliary_data.try_into())
+    })
+    .response(result, error)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_auxiliary_data_clone(
-  auxiliary_data: AuxiliaryData, result: &mut AuxiliaryData, error: &mut CError,
+    auxiliary_data: AuxiliaryData,
+    result: &mut AuxiliaryData,
+    error: &mut CError,
 ) -> bool {
-  handle_exception(|| auxiliary_data.clone()).response(result, error)
+    handle_exception(|| auxiliary_data.clone()).response(result, error)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn cardano_auxiliary_data_free(auxiliary_data: &mut AuxiliaryData) {
-  auxiliary_data.free()
+    auxiliary_data.free()
 }

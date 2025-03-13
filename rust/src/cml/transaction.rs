@@ -1,14 +1,12 @@
-use std::collections::HashSet;
-use std::iter::FromIterator;
-
 use super::tx_input_details::get_tx_input_details;
 use super::{
     AssetName, CmlAsset, CmlAssets, CmlTxOutput, CmlTxSummarised, CmlUTxO, CmlUTxOs, CmlValue,
     TxDetails, VecUtxo,
 };
+use crate::array::CArray;
 use crate::error::CError;
-use crate::panic::{handle_exception_result, CResponse};
-
+use crate::panic::{handle_exception_result, CResponse, Zip};
+use crate::ptr::Free;
 #[allow(unused_imports)]
 use crate::ptr::Ptr;
 use crate::string::CharPtr;
@@ -16,21 +14,21 @@ use crate::{data::CData, option::COption, string::IntoCString};
 #[allow(unused_imports)]
 use blake2::{Blake2b, Digest};
 use cml_chain::address::{Address, RewardAddress};
-use cml_chain::assets::{Mint, MultiAsset, Value as CML_Value};
+use cml_chain::assets::AssetName as CMLAssetName;
+use cml_chain::assets::{MultiAsset, Value as CML_Value};
 use cml_chain::builders::tx_builder::TransactionUnspentOutput;
 use cml_chain::builders::witness_builder::TransactionWitnessSetBuilder;
 use cml_chain::crypto::utils::make_vkey_witness;
 use cml_chain::min_ada::min_ada_required;
-use cml_chain::transaction::{
-    Transaction, TransactionInput, TransactionOutput, TransactionWitnessSet,
-};
-use cml_chain::{Deserialize, NonemptySetTransactionInput};
+use cml_chain::transaction::{DatumOption, ScriptRef, Transaction, TransactionInput, TransactionOutput, TransactionWitnessSet};
+use cml_chain::{Deserialize, NonemptySetTransactionInput, PolicyId};
 #[allow(unused_imports)]
 use cml_core::serialization::FromBytes;
-use cml_core::serialization::Serialize;
+use cml_core::serialization::{Serialize, ToBytes};
 use cml_crypto::chain_crypto::bech32::Bech32;
 use cml_crypto::{PrivateKey, RawBytesEncoding, TransactionHash};
-
+use std::collections::HashSet;
+use std::iter::FromIterator;
 /* End of Imports */
 
 impl CmlUTxO {
@@ -47,7 +45,7 @@ impl From<TransactionInput> for CmlUTxO {
         Self {
             tx_hash: value.transaction_id.to_raw_bytes().into(),
             tx_index: value.index,
-            orig_output: Option::None.into(),
+            orig_output: None.into(),
         }
     }
 }
@@ -60,12 +58,12 @@ impl From<MultiAsset> for CmlAssets {
             assets.iter().for_each(|(asset_name, amount)| {
                 let a = AssetName {
                     policy_id: &policy_id.to_raw_bytes().to_vec(),
-                    asset_name: asset_name.get(),
+                    asset_name: &asset_name.to_cbor_bytes(),
                 };
 
                 my_assets.push(CmlAsset {
                     fingerprint: a.to_bech32_str().into_cstr(),
-                    name: asset_name.get().clone().into(),
+                    name: asset_name.to_cbor_bytes().clone().into(),
                     policy: policy_id.to_raw_bytes().into(),
                     qty: amount.clone() as i64,
                 });
@@ -90,7 +88,7 @@ impl From<TransactionOutput> for CmlTxOutput {
         Self {
             address: value
                 .address()
-                .to_bech32(Option::None)
+                .to_bech32(None)
                 .unwrap_or("<Address Error>".to_ascii_lowercase())
                 .into_cstr(),
             value: Into::<CmlValue>::into(value.amount().clone()),
@@ -176,11 +174,11 @@ impl From<Transaction> for TxDetails {
                     match o.address().staking_cred() {
                         Some(staking_cred) => RewardAddress::new(0, staking_cred.clone())
                             .to_address()
-                            .to_bech32(Option::None)
+                            .to_bech32(None)
                             .map_err(|e| CError::Error(e.to_string().into_cstr())),
                         None => o
                             .address()
-                            .to_bech32(Option::None)
+                            .to_bech32(None)
                             .map_err(|e| CError::Error(e.to_string().into_cstr())),
                     },
                 )
@@ -222,19 +220,17 @@ impl From<Transaction> for TxDetails {
                             let reward_addr = RewardAddress::new(0, cred);
                             let addr = reward_addr.to_address();
 
-                            addr.to_bech32(Option::None)
-                                .ok()
-                                .unwrap_or(address_str.into())
+                            addr.to_bech32(None).ok().unwrap_or(address_str.into())
                         }
                         None => address_str.into(),
                     };
 
-                    Option::Some(CmlTxSummarised {
+                    Some(CmlTxSummarised {
                         stake_address: address_str.into_cstr(),
                         value: Into::<CmlValue>::into(o.value),
                     })
                 }
-                COption::None => Option::None,
+                COption::None => None,
             })
             .collect::<Option<Vec<CmlTxSummarised>>>()
             .unwrap_or(Vec::new());
@@ -332,12 +328,12 @@ impl From<Transaction> for TxDetails {
                         .map(|(asset_name, amount)| {
                             let a = AssetName {
                                 policy_id: &policy_id.to_raw_bytes().to_vec(),
-                                asset_name: asset_name.get(),
+                                asset_name: &asset_name.to_cbor_bytes(),
                             };
 
                             CmlAsset {
                                 fingerprint: a.to_bech32_str().into_cstr(),
-                                name: asset_name.get().clone().into(),
+                                name: asset_name.to_cbor_bytes().clone().into(),
                                 policy: policy_id.to_raw_bytes().into(),
                                 qty: amount.clone(),
                             }
@@ -446,6 +442,103 @@ pub unsafe extern "C" fn utxo_from_parts(
     .response(result, error)
 }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct AssetPair {
+    pub policy: CData,
+    pub asset_name: CData,
+    pub amount: u64,
+}
+
+impl Free for AssetPair {
+    unsafe fn free(&mut self) {
+        self.policy.free();
+        self.asset_name.free();
+        self.amount.free();
+    }
+}
+
+
+#[no_mangle]
+pub unsafe extern "C" fn into_utxo(
+    tx_hash: CharPtr,
+    index: u64,
+    address: CharPtr,
+    lovelace: u64,
+    assets: CArray<AssetPair>,
+    datum: CData,
+    script: CData,
+    result: &mut CmlUTxO,
+    error: &mut CError,
+) -> bool {
+    handle_exception_result(|| {
+        let tx_hash = unsafe { tx_hash.unowned() }?;
+        let tx_hash = TransactionHash::from_hex(tx_hash)
+            .map_err(|e| CError::DeserializeError(e.to_string().into_cstr()))?;
+
+        let tx_input = TransactionInput::new(tx_hash, index);
+
+        let address = unsafe { address.unowned() }?;
+
+        let address =
+            Address::from_bech32(address).map_err(|e| CError::Error(e.to_string().into_cstr()))?;
+
+        let assets = unsafe { assets.unowned()? };
+
+        let mut multi_asset: Result<MultiAsset, CError> = Ok(MultiAsset::new());
+
+        assets
+            .iter()
+            .map(|asset| {
+                unsafe { asset.policy.unowned() }.zip(
+                    unsafe { asset.asset_name.unowned() }
+                ).zip(Ok(asset.amount))
+            })
+            .filter_map(|res| { res.ok() })
+            .map(|((policy_bytes, asset_bytes), amount)| {
+                let policy = PolicyId::from_raw_bytes(policy_bytes);
+                let name = CMLAssetName::from_bytes(asset_bytes.into());
+
+                match (policy, name) {
+                    (Ok(policy), Ok(name)) => {
+                        let bundle = &mut MultiAsset::new();
+                        bundle.set(policy, name, amount);
+                        bundle.clone()
+                    }
+                    (_,_) => MultiAsset::new()
+                }
+            })
+            .for_each(|asset| {
+                multi_asset = multi_asset.clone().unwrap().checked_add(&asset).map_err(|e| { CError::Error(e.to_string().into_cstr())});
+            
+            });
+
+        let amount = cml_chain::Value::new(lovelace, multi_asset?.clone());
+
+        let datum = unsafe { datum.unowned() }?;
+        
+        let datum_option: Option<DatumOption> = if !datum.is_empty() {
+            Some(DatumOption::from_bytes(datum.to_bytes()).map_err(|e| { CError::Error(e.to_string().into_cstr())})? ) 
+        } else {
+            None
+        };
+        
+        let script = unsafe { script.unowned() }?;
+        let script_option = if !script.is_empty() {
+            Some(ScriptRef::from_bytes(script.to_bytes()).map_err(|e| { CError::Error(e.to_string().into_cstr())})? )
+        } else {
+            None
+        };
+
+        let output = TransactionOutput::new(address, amount, datum_option, script_option);
+
+        Ok(Into::<CmlUTxO>::into(TransactionUnspentOutput::new(
+            tx_input, output,
+        )))
+    })
+    .response(result, error)
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn cml_tx_details(
     transaction: CData,
@@ -527,7 +620,14 @@ pub unsafe extern "C" fn cml_tx_sign(
 
 #[cfg(test)]
 mod transaction_tests {
+    use std::convert::TryInto;
+    use cml_chain::crypto::{Vkey, Vkeywitness};
     use super::*;
+
+    use cml_crypto::{Ed25519Signature, PrivateKey};
+    use cml_crypto::Bip32PrivateKey;
+    use cml_core::serialization::{Serialize, ToBytes};
+    use hex::ToHex;
 
     fn test_asset_fp(asset_name: &str, policy_id: &str, expected: &str) {
         let asset_name = AssetName {
@@ -536,6 +636,40 @@ mod transaction_tests {
         };
 
         assert_eq!(asset_name.to_bech32_str(), expected.trim());
+    }
+
+    #[test]
+    fn text_vkey_witness() {
+
+        let vkey_witnesss = Vkeywitness::new(
+            Vkey::from_raw_hex("be4e836a53daa1b36df8a0f444d48b2459cbda259a76490f357c566401bae3da").unwrap(),
+            Ed25519Signature::from_hex("b400d9a4ed01a10da98d90bc5be9226087a0b512abc9158573e0026912617a0af52e80f3504f4f7afb78eb73f227137be54a325bae1b19945e44c785a834de09").unwrap()
+        );
+        let vkey_witnesss2 = Vkeywitness::new(
+            Vkey::from_raw_hex("aa4e836a53daa1b36df8a0f444d48b2459cbda259a76490f357c566401bae3da").unwrap(),
+            Ed25519Signature::from_hex("aa00d9a4ed01a10da98d90bc5be9226087a0b512abc9158573e0026912617a0af52e80f3504f4f7afb78eb73f227137be54a325bae1b19945e44c785a834de09").unwrap()
+        );
+
+        let vkey_witness3 = Vkeywitness::new(
+            Vkey::from_raw_hex("bb4e836a53daa1b36df8a0f444d48b2459cbda259a76490f357c566401bae3da").unwrap(),
+            Ed25519Signature::from_hex("bb00d9a4ed01a10da98d90bc5be9226087a0b512abc9158573e0026912617a0af52e80f3504f4f7afb78eb73f227137be54a325bae1b19945e44c785a834de09").unwrap()
+        );
+        let vkey_witnesss4 = Vkeywitness::new(
+            Vkey::from_raw_hex("cc4e836a53daa1b36df8a0f444d48b2459cbda259a76490f357c566401bae3da").unwrap(),
+            Ed25519Signature::from_hex("cc00d9a4ed01a10da98d90bc5be9226087a0b512abc9158573e0026912617a0af52e80f3504f4f7afb78eb73f227137be54a325bae1b19945e44c785a834de09").unwrap()
+        );
+
+        let mut witness_set_builder = TransactionWitnessSetBuilder::new();
+
+        witness_set_builder.add_vkey(vkey_witnesss);
+        witness_set_builder.add_vkey(vkey_witnesss2);
+        witness_set_builder.add_vkey(vkey_witness3);
+        witness_set_builder.add_vkey(vkey_witnesss4);
+        let witness_set = witness_set_builder.build();
+
+        println!("{}", hex::encode(witness_set.to_cbor_bytes()));
+        println!("{}", hex::encode(witness_set.to_canonical_cbor_bytes()));
+
     }
 
     #[test]
@@ -601,5 +735,32 @@ mod transaction_tests {
                 .unwrap()
         );
         assert_eq!(tx_details.fee, 476765);
+    }
+
+
+    #[test]
+    fn test_a_thing() {
+        env_logger::init();
+        // let mnumonic = "tired burger carry shaft silent brief tattoo bicycle raw mistake rural twenty people parrot purchase ill kid reason census rude purchase month across awkward";
+        let e = hex::decode("e2a3d48be27c8637f790afb291bef6759a2d40eb8b877a5660955e7ae31ec090").unwrap();
+
+        let password = Vec::new();
+        let pk = Bip32PrivateKey::from_bip39_entropy(&e, &password);
+        
+        println!("Root Key: {}", pk.to_raw_hex());
+        
+        let acc0addr0 = pk
+            .derive(harden(1852))
+            .derive(harden(1815))
+            .derive(harden(0))
+            .derive(0)
+            .derive(0);
+
+        println!("PK: {}", acc0addr0.to_raw_hex() );
+        // a84cdce37b7f08ac445f8cc4a16bbc90ce87b5e9551b42a5545a3866c9873b529b352fc222a606bc9806fea7f24274bf9bd3800e4088e59152a54614dd0bad9dfeac073b78f95e8e1a468d9c52328f6d6fe3a4af4e14399ff458568042705294
+        // a84cdce37b7f08ac445f8cc4a16bbc90ce87b5e9551b42a5545a3866c9873b529b352fc222a606bc9806fea7f24274bf9bd3800e4088e59152a54614dd0bad9dfeac073b78f95e8e1a468d9c52328f6d6fe3a4af4e14399ff458568042705294
+    }
+    fn harden(index: u32) -> u32 {
+        index | 0x80_00_00_00
     }
 }

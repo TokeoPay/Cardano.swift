@@ -89,11 +89,11 @@ version = "0.1"
 version = "=0.3.51"
 
 [target."cfg(all(target_arch = \"wasm32\", not(target_os = \"emscripten\")))".dependencies.rand_os]
-version = "0.1"
+version = "0.2.2"
 features = ["wasm-bindgen"]
 
 [target."cfg(all(target_arch = \"wasm32\", not(target_os = \"emscripten\")))".dependencies.wasm-bindgen]
-version = "=0.2.83"
+version = "=0.2.87"
 [target."cfg(not(all(target_arch = \"wasm32\", not(target_os = \"emscripten\"))))".dependencies.noop_proc_macro]
 version = "0.3.0"
 

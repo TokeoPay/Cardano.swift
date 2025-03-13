@@ -1,5 +1,5 @@
-use super::string::*;
 use super::ptr::*;
+use super::string::*;
 use cardano_serialization_lib::error::*;
 
 #[repr(C)]
@@ -21,7 +21,7 @@ impl Free for CError {
             &mut CError::Utf8Error(mut ptr) => ptr.free(),
             &mut CError::DeserializeError(mut ptr) => ptr.free(),
             &mut CError::Error(mut ptr) => ptr.free(),
-            _ => return
+            _ => return,
         }
     }
 }
