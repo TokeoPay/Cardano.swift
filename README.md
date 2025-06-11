@@ -1,3 +1,6 @@
+
+![Cardano](/cardano-kit.png)
+
 # CardanoKit
 
 ![🐧 linux: ready](https://img.shields.io/badge/%F0%9F%90%A7%20linux-ready-red.svg)
@@ -9,7 +12,7 @@
 ![Platform macOS | iOS | Linux](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20iOS-orange.svg)
 
 Swift SDK for Cardano network (Alonzo).
-![My Image](/cardano-kit.png)
+
 
 ## Installation
 
