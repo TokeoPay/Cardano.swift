@@ -9,7 +9,7 @@
 ![Platform macOS | iOS | Linux](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20iOS-orange.svg)
 
 Swift SDK for Cardano network (Alonzo).
-![My Image](CardanoKit.png)
+![My Image](/CardanoKit.png)
 
 ## Installation
 
